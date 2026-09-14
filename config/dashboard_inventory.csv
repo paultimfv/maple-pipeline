@@ -1,0 +1,41 @@
+file,source_type,rebuild_path,rows,date_range
+Maple_Finance_Deposit_Inflows,events,pool Deposit logs,2506,2023-01-26→2026-09-11
+Maple_Finance_Monthly_Deposit_Inflows,events,pool Deposit logs,170,2023-01→2026-09
+Maple_Finance_Lenders,events,pool Deposit logs (owner_),45,2023-01→2026-09
+Maple_V2_Deposits_By_Size,events,pool Deposit logs,33189,
+Maple_V2_Deposits_Depositor_Tiers,events,pool Deposit logs (owner_),4,
+Maple_V2_Deposits_Top_10_Depositor_Share,events,pool Deposit logs (owner_) — REDO on owner_ not tx_from,2,
+Maple_V2_Average_Deposit_Size_Over_Time,events,pool Deposit logs,45,2023-01→2026-09
+Maple_Finance_Supply_Side_Overview,events,pool Deposit logs,1,
+Maple_Finance_Supply_Side_Overview_Per_Pool,events,pool Deposit logs,11,
+Maple_Finance_Monthly_Borrowers,events,ClaimedFundsDistributed + FundsDistributed + PaymentMade,53,2022-01→2026-09
+Maple_Finance_Borrower_Totals,events,same + loan contract borrower(),1,
+Maple_Finance_Borrower_Pulse,events,same,3,
+Maple_Finance_Borrower_Rates,events+state,loan contract interestRate() — needs open-term loan addresses,51,2022-01→2026-09
+Maple_Finance_-_Revenue_Per_Loan,events,ClaimedFundsDistributed per loan_ + borrower(),355,
+Demand-Side_syrupUSDG_Top_Loans_by_Interest_Generated,events,ClaimedFundsDistributed on 0x7be9a1fa,12,
+Maple_Finance_Fees_Breakdown,events,ManagementFeesPaid + ServiceFeesPaid + StrategyFeesCollected + open-term mgmt fee from ClaimedFundsDistributed,33,2024-01→2026-09
+Maple_Finance_Monthly_Fee_Breakdown,events,same as Fees_Breakdown (dupe),33,2024-01→2026-09
+Maple_V2_Fee_Wedge_Split_Maple_vs_Pool_Delegates_Quarterly,events,ClaimedFundsDistributed fee params,14,
+Maple_V2_-_Open_Term_Loans_Borrowed_Dollar_Utility,events,ClaimedFundsDistributed (netInterest/delegate/platform split),40,2023-06→2026-09
+Maple_V2_Strategy_Fees_Total,events,StrategyFeesCollected by emitter,1,
+Maple_Finance_Loan_Defaults,events,fixed-term loan default/impair events (not yet in ABI bundle — check LoanManager UnrealizedLossesUpdated),2,2022-12→2023-02
+Maple_Finance_Outstanding_Loans,state,PrincipalOutUpdated events OR loanManager.principalOut() calls,45,2023-01→2026-09
+Maple_Finance_-_All_Pools,state,spellbook maple_pools_historical — eth_call totalAssets/totalSupply/principalOut daily per pool,23382,2022-12-11→2026-09-10
+Maple_Finance_Loan_Book,state,derived from All_Pools latest,1,2026-09-10
+Maple_Finance_Loan_Book_Time_series,state,derived from All_Pools,1370,2022-12-11→2026-09-10
+Maple_Finance_Pools_Snapshot,state,derived from All_Pools latest + xirr,6,
+LP_Yield_Over_Time,state,trailing XIRR from exch_rate series,2325,2024-08-02→2026-09-10
+Pool_AUM_vs_Deposits_Over_Time_Protocol_totals,state,All_Pools tvl + collateral,1370,2022-12-11→2026-09-10
+syrupUSDG_Daily_Metrics,state,All_Pools filtered to 0x87b65c4a + strategy split,109,2026-05-25→2026-09-10
+syrupUSDG_Summary,state,derived,1,2026-09-10
+Maple_AUM_vs_Token_Price,state+price,All_Pools tvl + SYRUP price,364,2025-07-27→2026-07-25
+Maple_Finance_Market_Cap_AUM_Ratio,state+price,tvl + SYRUP mcap,364,2025-07-27→2026-07-25
+Maple_Finance_Market_Cap_Revenue_TTM,price+events+offchain,mcap + fees + OTC,13,2025-07→2026-07
+SYRUP_1Y_Performance,price,external price feed (CoinGecko / Dune prices.usd) — not Maple contracts,364,2025-07-27→2026-07-25
+SYRUP_Time_Series,price,external price feed,668,2024-11-13→2026-09-11
+SYRUP_Buybacks_Monthly,price+events,treasury 0xa9466EaB SYRUP transfers + price,12,2025-01→2026-07
+Maple_Finance_-_Monthly_OTC_Revenue,OFFCHAIN,dune.maple-finance.dataset_dune_monthly_historical — Maple-uploaded; MANUAL INGEST,28,2024-02→2026-05
+Maple_Finance_Revenue_Model,events+OFFCHAIN,fees from events + OTC from offchain dataset,5,
+Revenue_Model_By_PoolAsset_All-Time_Totals,events,fee events grouped by pool,13,
+SyrupUSDG_-_Supply_Price_AUM_by_Chain,CROSSCHAIN,dune.dune.result_syrupusdg community table — Ethereum + Robinhood Chain; raw robinhood tables unverified,197,2026-05-29→2026-09-07
