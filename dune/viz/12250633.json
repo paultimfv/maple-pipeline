@@ -1,0 +1,13 @@
+{
+ "id": 12250633,
+ "queryId": 8254314,
+ "type": "table",
+ "chartType": "table",
+ "name": "Query results",
+ "options": {},
+ "createdAt": "2026-08-07T13:17:18.565Z",
+ "updatedAt": "2026-08-07T13:17:18.565Z",
+ "isPrivate": false,
+ "interactiveChartUrl": "https://dune.com/embeds/8254314/12250633",
+ "chartJpegUrl": "https://core-api.dune.com/public/screenshot?url=https%3A%2F%2Fdune.com%2Fembeds%2F8254314%2F12250633&cache=0"
+}

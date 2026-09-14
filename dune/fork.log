@@ -1,0 +1,5 @@
+14:45:43 [8254314 -> 8714289] Maple Finance Loan Book
+14:45:49    executed (0.244 credits)
+14:45:50    viz 12250631 -> 12738657 'Share of Total Loans Outstanding' ok 
+14:45:51    viz 12250632 -> 12738659 'Total Loans Outstanding' ok 
+14:45:52    skip viz 12250633 'Query results': ['default results table - skipped']
