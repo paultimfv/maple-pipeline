@@ -199,3 +199,27 @@ CREATE TABLE IF NOT EXISTS llama_protocol_daily (
   value_usd  numeric NOT NULL,
   PRIMARY KEY (day, protocol, metric)
 );
+
+-- Morpho Blue credit side (all markets): borrows/repays + collateral in/out. Joined to morpho_markets for collateral symbol.
+CREATE TABLE IF NOT EXISTS morpho_credit (
+  block_time   timestamptz NOT NULL,
+  block_number bigint NOT NULL,
+  tx_hash      text NOT NULL,
+  log_index    integer NOT NULL,
+  kind         text NOT NULL,     -- borrow | repay | supply_collateral | withdraw_collateral
+  market_id    text NOT NULL,
+  on_behalf    text NOT NULL,
+  amount       numeric NOT NULL,  -- raw / 10^dec (USDG 6 for borrow/repay; collateral token decimals for collateral)
+  PRIMARY KEY (tx_hash, log_index)
+);
+-- Robinhood stock tokens ("• Robinhood Token"): mints/burns -> supply
+CREATE TABLE IF NOT EXISTS stock_token_flows (
+  token        text NOT NULL,
+  block_time   timestamptz NOT NULL,
+  block_number bigint NOT NULL,
+  tx_hash      text NOT NULL,
+  log_index    integer NOT NULL,
+  kind         text NOT NULL,     -- mint | burn
+  amount       numeric NOT NULL,  -- shares (18 dec applied)
+  PRIMARY KEY (tx_hash, log_index)
+);

@@ -8,6 +8,7 @@ def prune(conn):
     n = conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s AND topic0 <> %s",
                      (RH_MORPHO_BLUE, "0xac4b2400f169220b0c0afdde7a0b32e775ba727ea1cb30b35f935cdaab8683ac")).rowcount
     n += conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s", (RH_EARN_VAULT_V2,)).rowcount
+    n += conn.execute("DELETE FROM raw_logs r USING stock_token_flows s WHERE r.tx_hash=s.tx_hash AND r.log_index=s.log_index").rowcount
     conn.commit(); print(f"pruned {n} decoded morpho/earn raw rows")
 
 if __name__ == "__main__":

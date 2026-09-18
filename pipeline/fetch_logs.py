@@ -24,8 +24,11 @@ def fetch(ev, conn):
     chunk, total = CHUNK[chain], 0
     topics = [hx(ev["topic0"])] + ev.get("extra_topics", [])
     flt = {"topics": topics}
-    if ev["addresses"]:
-        flt["address"] = [Web3.to_checksum_address(a) for a in ev["addresses"]]
+    addrs = ev["addresses"]
+    if addrs == "STOCK_TOKENS":
+        from common import stock_tokens; addrs = stock_tokens()
+    if addrs:
+        flt["address"] = [Web3.to_checksum_address(a) for a in addrs]
     print(f"{key}: blocks {frm:,} -> {head:,}")
     while frm <= head:
         to = min(frm + chunk - 1, head)

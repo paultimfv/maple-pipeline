@@ -14,6 +14,10 @@ TOPIC = {
     "create":    T("CreateMarket(bytes32,(address,address,address,address,uint256))"),
     "e_dep":     T("Deposit(address,address,uint256,uint256)"),
     "e_wd":      T("Withdraw(address,address,address,uint256,uint256)"),
+    "borrow":    T("Borrow(bytes32,address,address,address,uint256,uint256)"),
+    "repay":     T("Repay(bytes32,address,address,uint256,uint256)"),
+    "sc":        T("SupplyCollateral(bytes32,address,address,uint256)"),
+    "wc":        T("WithdrawCollateral(bytes32,address,address,address,uint256)"),
     "claimed":   T("ClaimedFundsDistributed(address,uint256,uint256,uint256,uint256,uint256,uint256)"),
     "pout":      T("PrincipalOutUpdated(uint128)"),
     "init":      T("Initialized(address,address,address,uint256,uint32[3],uint64[4])"),
@@ -79,6 +83,36 @@ def run():
             out.append((bt, bn, tx, li, "withdraw", addr(topics[3]), assets / 1e6, shares / 1e18))
         cur.executemany("INSERT INTO earn_flows VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
         print("earn_flows", len(out))
+
+        # Morpho credit side. Borrow(id idx, caller, onBehalf idx, receiver idx, assets, shares); Repay(id idx, caller, onBehalf idx, assets, shares)
+        # SupplyCollateral(id idx, caller, onBehalf idx, assets); WithdrawCollateral(id idx, caller, onBehalf idx, receiver idx, assets)
+        dec = {r[0]: (r[1] or 18) for r in conn.execute("SELECT m.market_id, t.decimals FROM morpho_markets m LEFT JOIN rh_tokens t ON t.address = m.collateral_token")}
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["borrow"], RH_MORPHO_BLUE):
+            caller, assets, shares = abi_decode(["address", "uint256", "uint256"], bytes.fromhex(data[2:]))
+            out.append((bt, bn, tx, li, "borrow", topics[1], addr(topics[2]), assets / 1e6))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["repay"], RH_MORPHO_BLUE):   # topics: id, caller, onBehalf; data: assets, shares
+            assets, shares = data_words(data, 2)
+            out.append((bt, bn, tx, li, "repay", topics[1], addr(topics[3]), assets / 1e6))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["sc"], RH_MORPHO_BLUE):      # topics: id, caller, onBehalf; data: assets
+            (assets,) = data_words(data, 1)
+            out.append((bt, bn, tx, li, "supply_collateral", topics[1], addr(topics[3]), assets / 10 ** dec.get(topics[1], 18)))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["wc"], RH_MORPHO_BLUE):
+            caller, assets = abi_decode(["address", "uint256"], bytes.fromhex(data[2:]))
+            out.append((bt, bn, tx, li, "withdraw_collateral", topics[1], addr(topics[2]), assets / 10 ** dec.get(topics[1], 18)))
+        cur.executemany("INSERT INTO morpho_credit VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("morpho_credit", len(out))
+
+        # Robinhood stock tokens: mints/burns
+        stocks = {r[0] for r in conn.execute("SELECT address FROM rh_tokens WHERE name LIKE '%• Robinhood Token'")}
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["transfer"]):
+            if a not in stocks: continue
+            f, t = addr(topics[1]), addr(topics[2])
+            if f == ZERO:   out.append((a, bt, bn, tx, li, "mint", data_words(data, 1)[0] / 1e18))
+            elif t == ZERO: out.append((a, bt, bn, tx, li, "burn", data_words(data, 1)[0] / 1e18))
+        cur.executemany("INSERT INTO stock_token_flows VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("stock_token_flows", len(out))
 
         # ethereum: ClaimedFundsDistributed(address indexed loan_, uint256 x6)
         out = []
