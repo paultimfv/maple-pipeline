@@ -1,13 +1,14 @@
 """Daily job: logs -> block times -> decode -> prune -> state -> llama. Every step is incremental/idempotent."""
 import datetime as dt, traceback
-import fetch_logs, fetch_blocks, decode, fetch_state, fetch_llama
-from common import db, RH_MORPHO_BLUE
+import fetch_logs, fetch_blocks, decode, fetch_state, fetch_llama, fetch_syrup, fetch_rh_activity, fetch_l1_cost
+from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
     """Morpho raw rows are large and already decoded; keep only CreateMarket (Neon free tier = 512 MB)."""
     n = conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s AND topic0 <> %s",
                      (RH_MORPHO_BLUE, "0xac4b2400f169220b0c0afdde7a0b32e775ba727ea1cb30b35f935cdaab8683ac")).rowcount
-    conn.commit(); print(f"pruned {n} decoded morpho raw rows")
+    n += conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s", (RH_EARN_VAULT_V2,)).rowcount
+    conn.commit(); print(f"pruned {n} decoded morpho/earn raw rows")
 
 if __name__ == "__main__":
     print(f"=== run_all {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC")
@@ -18,6 +19,9 @@ if __name__ == "__main__":
         ("prune",  lambda: prune(db())),
         ("state",  fetch_state.main),
         ("llama",  fetch_llama.main),
+        ("syrup",  fetch_syrup.main),
+        ("rh_activity", fetch_rh_activity.main),
+        ("l1_cost", fetch_l1_cost.main),
     ]
     for name, fn in steps:
         try: fn(); print(f"--- {name} ok")

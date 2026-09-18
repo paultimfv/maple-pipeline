@@ -110,3 +110,74 @@ CREATE TABLE IF NOT EXISTS chain_tvl (
   day     date PRIMARY KEY,
   tvl_usd numeric NOT NULL
 );
+
+-- Robinhood Earn user-facing vault (Steakhouse USDG, ERC-4626) deposits/withdrawals
+CREATE TABLE IF NOT EXISTS earn_flows (
+  block_time   timestamptz NOT NULL,
+  block_number bigint NOT NULL,
+  tx_hash      text NOT NULL,
+  log_index    integer NOT NULL,
+  kind         text NOT NULL,          -- 'deposit' | 'withdraw'
+  owner        text NOT NULL,          -- share owner (the user)
+  assets       numeric NOT NULL,       -- USDG
+  shares       numeric NOT NULL,
+  PRIMARY KEY (tx_hash, log_index)
+);
+
+-- SYRUP token (CoinGecko daily) + buybacks (Maple transparency page, hand-maintained CSV)
+CREATE TABLE IF NOT EXISTS syrup_price (
+  day        date PRIMARY KEY,
+  price_usd  numeric NOT NULL,
+  mcap_usd   numeric,
+  volume_usd numeric
+);
+CREATE TABLE IF NOT EXISTS syrup_buybacks (
+  month        date PRIMARY KEY,
+  amount_usd   numeric NOT NULL,
+  syrup_bought numeric NOT NULL,
+  avg_price    numeric
+);
+
+-- Robinhood Chain activity: sampled blocks (N per UTC day, evenly spaced) with receipts
+CREATE TABLE IF NOT EXISTS rh_day_blocks (
+  day          date PRIMARY KEY,
+  first_block  bigint NOT NULL,
+  last_block   bigint NOT NULL,
+  n_blocks     bigint NOT NULL,
+  sampled      integer NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS rh_block_samples (
+  block_number bigint PRIMARY KEY,
+  day          date NOT NULL,
+  block_time   timestamptz NOT NULL,
+  txs          integer NOT NULL,
+  unique_from  integer NOT NULL,
+  gas_used     bigint NOT NULL,
+  base_fee     numeric NOT NULL,       -- wei
+  fees_eth     numeric NOT NULL,       -- Σ gasUsed×effectiveGasPrice
+  l1_gas       bigint NOT NULL         -- Σ gasUsedForL1 (L1 posting portion)
+);
+CREATE TABLE IF NOT EXISTS rh_block_to (
+  block_number bigint NOT NULL,
+  to_addr      text NOT NULL,
+  txs          integer NOT NULL,
+  gas_used     bigint NOT NULL,
+  fees_eth     numeric NOT NULL,
+  PRIMARY KEY (block_number, to_addr)
+);
+CREATE TABLE IF NOT EXISTS rh_labels (
+  address text PRIMARY KEY,
+  label   text NOT NULL,
+  kind    text NOT NULL
+);
+
+-- Robinhood Chain L1 posting cost: every tx to the SequencerInbox on Ethereum (batch poster)
+CREATE TABLE IF NOT EXISTS rh_l1_batches (
+  tx_hash      text PRIMARY KEY,
+  block_number bigint NOT NULL,
+  block_time   timestamptz NOT NULL,
+  gas_used     bigint NOT NULL,
+  fee_eth      numeric NOT NULL,   -- gasUsed × effectiveGasPrice (+ blob fee)
+  blob_fee_eth numeric NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS eth_price (day date PRIMARY KEY, price_usd numeric NOT NULL);

@@ -50,7 +50,8 @@ RH_TOKENS = {  # robinhood chain
     "syrupUSDC": "0xc6a4854eeb493224d5f9485e12dd3a81f22eee14",
 }
 RH_MORPHO_BLUE   = "0x9d53d5e3bd5e8d4cbfa6db1ca238aea02e651010"
-RH_EARN_VAULT    = "0x44abc1d6ccff2696d98890b92e2157af242179c2"
+RH_EARN_VAULT    = "0x44abc1d6ccff2696d98890b92e2157af242179c2"   # Morpho V2 adapter (allocates into Blue markets)
+RH_EARN_VAULT_V2 = "0xbeeff033f34c046626b8d0a041844c5d1a5409dd"   # Steakhouse USDG (steakUSDG) — user-facing ERC-4626 vault
 RH_USDG          = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
 RH_MARKET_SYRUPUSDG = "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7"
 
@@ -80,6 +81,10 @@ def tracked_events():
          "addresses": [RH_USDG], "extra_topics": ["0x" + "0"*64], "from_block": 1},
         {"key": "rh.Transfer.usdg.burn", "chain": "robinhood", "topic0": t("Transfer(address,address,uint256)"),
          "addresses": [RH_USDG], "extra_topics": [None, "0x" + "0"*64], "from_block": 1},
+        {"key": "rh.Earn.Deposit", "chain": "robinhood", "topic0": t("Deposit(address,address,uint256,uint256)"),
+         "addresses": [RH_EARN_VAULT_V2], "from_block": 1},
+        {"key": "rh.Earn.Withdraw", "chain": "robinhood", "topic0": t("Withdraw(address,address,address,uint256,uint256)"),
+         "addresses": [RH_EARN_VAULT_V2], "from_block": 1},
         {"key": "rh.Morpho.Supply", "chain": "robinhood", "topic0": t("Supply(bytes32,address,address,uint256,uint256)"),
          "addresses": [RH_MORPHO_BLUE], "from_block": 1},
         {"key": "rh.Morpho.Withdraw", "chain": "robinhood", "topic0": t("Withdraw(bytes32,address,address,address,uint256,uint256)"),

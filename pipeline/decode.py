@@ -4,7 +4,7 @@ Idempotent (ON CONFLICT DO NOTHING). Rows without a block timestamp yet are skip
 """
 from eth_abi import decode as abi_decode
 from web3 import Web3
-from common import (db, RH_TOKENS, RH_USDG, RH_MORPHO_BLUE, RH_COLLATERAL_SYMBOLS, RH_EARN_VAULT, ZERO, WETH_OTLM)
+from common import (db, RH_TOKENS, RH_USDG, RH_EARN_VAULT_V2, RH_MORPHO_BLUE, RH_COLLATERAL_SYMBOLS, RH_EARN_VAULT, ZERO, WETH_OTLM)
 
 T = lambda s: "0x" + Web3.keccak(text=s).hex()
 TOPIC = {
@@ -12,6 +12,8 @@ TOPIC = {
     "supply":    T("Supply(bytes32,address,address,uint256,uint256)"),
     "withdraw":  T("Withdraw(bytes32,address,address,address,uint256,uint256)"),
     "create":    T("CreateMarket(bytes32,(address,address,address,address,uint256))"),
+    "e_dep":     T("Deposit(address,address,uint256,uint256)"),
+    "e_wd":      T("Withdraw(address,address,address,uint256,uint256)"),
     "claimed":   T("ClaimedFundsDistributed(address,uint256,uint256,uint256,uint256,uint256,uint256)"),
     "pout":      T("PrincipalOutUpdated(uint128)"),
     "init":      T("Initialized(address,address,address,uint256,uint32[3],uint64[4])"),
@@ -65,6 +67,17 @@ def run():
             out.append((bt, bn, tx, li, "withdraw", topics[1], on_behalf, assets / 1e6))
         cur.executemany("INSERT INTO morpho_flows VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
         print("morpho_flows", len(out))
+
+        # Earn vault (ERC-4626): Deposit(sender idx, owner idx, assets, shares) / Withdraw(sender idx, receiver idx, owner idx, assets, shares)
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["e_dep"], RH_EARN_VAULT_V2):
+            assets, shares = data_words(data, 2)
+            out.append((bt, bn, tx, li, "deposit", addr(topics[2]), assets / 1e6, shares / 1e18))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["e_wd"], RH_EARN_VAULT_V2):
+            assets, shares = data_words(data, 2)
+            out.append((bt, bn, tx, li, "withdraw", addr(topics[3]), assets / 1e6, shares / 1e18))
+        cur.executemany("INSERT INTO earn_flows VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("earn_flows", len(out))
 
         # ethereum: ClaimedFundsDistributed(address indexed loan_, uint256 x6)
         out = []

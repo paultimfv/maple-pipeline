@@ -66,12 +66,12 @@ def main():
         while n <= hi:
             grid.add(n); n += 1_000 if n < 1_000_000 else 10_000
         grid.update([lo, hi])
-        # exact for the small sets (syrup transfers, markets) — cheap and precise
+        # exact for the small sets (syrup/USDG mints+burns, markets); Morpho + Earn vault rows are interpolated
         exact = [r[0] for r in conn.execute("""
             SELECT DISTINCT r.block_number FROM raw_logs r
             LEFT JOIN blocks b ON b.chain=r.chain AND b.block_number=r.block_number
-            WHERE r.chain='robinhood' AND b.block_number IS NULL AND r.address <> %s""",
-            ("0x9d53d5e3bd5e8d4cbfa6db1ca238aea02e651010",)).fetchall()]
+            WHERE r.chain='robinhood' AND b.block_number IS NULL AND r.address NOT IN (%s, %s)""",
+            ("0x9d53d5e3bd5e8d4cbfa6db1ca238aea02e651010", "0xbeeff033f34c046626b8d0a041844c5d1a5409dd")).fetchall()]
         grid.update(exact)
         print(f"robinhood: {len(miss):,} blocks, {len(grid):,} anchors")
         anchors = get_block_times(BATCH_RPC["robinhood"], sorted(grid), batch=10, threads=2)
