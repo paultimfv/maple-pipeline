@@ -6,7 +6,7 @@ import psycopg
 from web3 import Web3
 
 ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / ".env")   # optional; CI passes env vars directly
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 
