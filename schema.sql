@@ -181,3 +181,21 @@ CREATE TABLE IF NOT EXISTS rh_l1_batches (
   blob_fee_eth numeric NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS eth_price (day date PRIMARY KEY, price_usd numeric NOT NULL);
+
+-- DeFiLlama: Robinhood Chain macro (source-labeled, not self-indexed)
+CREATE TABLE IF NOT EXISTS llama_chain_daily (
+  day              date PRIMARY KEY,
+  tvl_usd          numeric,
+  fees_usd         numeric,      -- all protocols on the chain (overview/fees)
+  revenue_usd      numeric,      -- all protocols (dailyRevenue)
+  dex_volume_usd   numeric,      -- overview/dexs
+  sequencer_fees_usd numeric     -- 'Robinhood Chain' protocol = gas fees paid to the chain
+);
+CREATE TABLE IF NOT EXISTS llama_protocol_daily (
+  day        date NOT NULL,
+  protocol   text NOT NULL,
+  category   text,
+  metric     text NOT NULL,      -- 'fees' | 'revenue' | 'dex_volume'
+  value_usd  numeric NOT NULL,
+  PRIMARY KEY (day, protocol, metric)
+);

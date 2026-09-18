@@ -1,6 +1,6 @@
 """Daily job: logs -> block times -> decode -> prune -> state -> llama. Every step is incremental/idempotent."""
 import datetime as dt, traceback
-import fetch_logs, fetch_blocks, decode, fetch_state, fetch_llama, fetch_syrup, fetch_rh_activity, fetch_l1_cost, subprocess, sys, os
+import fetch_logs, fetch_blocks, decode, fetch_state, fetch_llama, fetch_syrup, subprocess, sys, os
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
@@ -21,8 +21,6 @@ if __name__ == "__main__":
         ("state",  fetch_state.main),
         ("llama",  fetch_llama.main),
         ("syrup",  fetch_syrup.main),
-        ("rh_activity", fetch_rh_activity.main),
-        ("l1_cost", fetch_l1_cost.main),
     ]
     for name, fn in steps:
         try: fn(); print(f"--- {name} ok")
