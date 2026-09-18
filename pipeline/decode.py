@@ -68,12 +68,13 @@ def run():
         cur.executemany("INSERT INTO morpho_flows VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
         print("morpho_flows", len(out))
 
+        # Earn vault: handled by decode_earn_chunked.py (memory-decode, delete raw, insert) — Neon 512MB cap
         # Earn vault (ERC-4626): Deposit(sender idx, owner idx, assets, shares) / Withdraw(sender idx, receiver idx, owner idx, assets, shares)
         out = []
-        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["e_dep"], RH_EARN_VAULT_V2):
+        for a, topics, data, bn, tx, li, bt in [] and rows(conn, "robinhood", TOPIC["e_dep"], RH_EARN_VAULT_V2):
             assets, shares = data_words(data, 2)
             out.append((bt, bn, tx, li, "deposit", addr(topics[2]), assets / 1e6, shares / 1e18))
-        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["e_wd"], RH_EARN_VAULT_V2):
+        for a, topics, data, bn, tx, li, bt in [] and rows(conn, "robinhood", TOPIC["e_wd"], RH_EARN_VAULT_V2):
             assets, shares = data_words(data, 2)
             out.append((bt, bn, tx, li, "withdraw", addr(topics[3]), assets / 1e6, shares / 1e18))
         cur.executemany("INSERT INTO earn_flows VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
