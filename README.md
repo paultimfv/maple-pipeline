@@ -6,7 +6,8 @@ Scope narrowed to what `dune.com/ptimfv_team_000f9a82/maplexrobinhood` needs. Du
 (`DATABASE_URL` in .env). Two chains: Ethereum (Infura for logs/blocks, Alchemy for eth_call) and
 Robinhood Chain 4663 (public RPC for logs; Alchemy `robinhood-mainnet` for batched block lookups).
 
-    python pipeline/run_all.py        # daily: logs -> blocks -> decode -> state -> llama
+    python pipeline/run_all.py        # logs -> blocks -> decode -> prune -> state -> llama
+    # runs daily 06:15 UTC via .github/workflows/daily.yml (secrets: DATABASE_URL, INFURA_URL, RPC_URL)
     python pipeline/fetch_logs.py rh. # one chain
     schema.sql                        # tables
 
