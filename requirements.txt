@@ -1,3 +1,5 @@
 web3>=7
 duckdb>=1.0
 python-dotenv
+psycopg[binary]
+requests

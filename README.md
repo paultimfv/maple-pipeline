@@ -1,5 +1,20 @@
 # maple-pipeline
 
+## 2026-09-18 — Robinhood dashboard pipeline (Postgres/Neon)
+
+Scope narrowed to what `dune.com/ptimfv_team_000f9a82/maplexrobinhood` needs. DuckDB replaced by Neon Postgres
+(`DATABASE_URL` in .env). Two chains: Ethereum (Infura for logs/blocks, Alchemy for eth_call) and
+Robinhood Chain 4663 (public RPC for logs; Alchemy `robinhood-mainnet` for batched block lookups).
+
+    python pipeline/run_all.py        # daily: logs -> blocks -> decode -> state -> llama
+    python pipeline/fetch_logs.py rh. # one chain
+    schema.sql                        # tables
+
+Robinhood block timestamps: exact for syrup transfers/markets, anchor+interpolated for the ~270k
+Morpho blocks (daily buckets only). Alchemy eth-mainnet free tier throttles hard (429) — keep Ethereum
+block lookups on Infura. Web app: ~/Documents/maple-dashboard/web (Next.js, reads the same DB).
+
+
 Rebuild of the Maple Finance "Business Analysis" Dune dashboard from raw chain data,
 starting with syrupUSDG.
 
