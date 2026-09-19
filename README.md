@@ -1,7 +1,8 @@
 # maple-pipeline
 
-On-chain data pipeline behind the Maple × Robinhood dashboard (~/Documents/maple-dashboard/web, live at
-maple-robinhood.vercel.app). Raw logs from two chains → decoded tables in Neon Postgres → daily refresh.
+Onchain data pipeline behind the Maple × Robinhood dashboard.
+
+Raw logs from two chains → decoded tables in Neon Postgres → daily refresh.
 
 ## How it runs
 
