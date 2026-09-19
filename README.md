@@ -1,52 +1,39 @@
 # maple-pipeline
 
-## 2026-09-18 — Robinhood dashboard pipeline (Postgres/Neon)
+On-chain data pipeline behind the Maple × Robinhood dashboard (~/Documents/maple-dashboard/web, live at
+maple-robinhood.vercel.app). Raw logs from two chains → decoded tables in Neon Postgres → daily refresh.
 
-Scope narrowed to what `dune.com/ptimfv_team_000f9a82/maplexrobinhood` needs. DuckDB replaced by Neon Postgres
-(`DATABASE_URL` in .env). Two chains: Ethereum (Infura for logs/blocks, Alchemy for eth_call) and
-Robinhood Chain 4663 (public RPC for logs; Alchemy `robinhood-mainnet` for batched block lookups).
+## How it runs
 
     python pipeline/run_all.py        # logs -> blocks -> decode -> prune -> state -> llama
-    # runs daily 06:15 UTC via .github/workflows/daily.yml (secrets: DATABASE_URL, INFURA_URL, RPC_URL)
     python pipeline/fetch_logs.py rh. # one chain
     schema.sql                        # tables
 
-Robinhood block timestamps: exact for syrup transfers/markets, anchor+interpolated for the ~270k
-Morpho blocks (daily buckets only). Alchemy eth-mainnet free tier throttles hard (429) — keep Ethereum
-block lookups on Infura. Web app: ~/Documents/maple-dashboard/web (Next.js, reads the same DB).
+Runs daily at 06:15 UTC via `.github/workflows/daily.yml` (secrets: `DATABASE_URL`, `INFURA_URL`, `RPC_URL`).
 
+Two chains: Ethereum (Infura for logs/blocks, Alchemy for `eth_call`) and Robinhood Chain 4663 (public RPC
+for logs; Alchemy `robinhood-mainnet` for batched block lookups). Chain-level TVL/fees come from DeFiLlama
+and are labeled as such on the dashboard.
 
-Rebuild of the Maple Finance "Business Analysis" Dune dashboard from raw chain data,
-starting with syrupUSDG.
-
-## Status — 2026-09-14
-
-**Done**
-- Contract map extracted: 239 addresses (Maple official registry + Dune event stats),
-  9 ABI bundles, 89 events with topic0, 147 fixed-term loan contracts. `config/`
-- Dune dashboard exported: 46 CSVs, inventoried by source type in `config/dashboard_inventory.csv`
-- Findings that change the writeup: `0x191ac162…` is Maple's SyrupRouter, not a Robinhood
-  vault; OTC revenue (46% of total) is an offchain Maple-uploaded dataset; Sky/Aave
-  strategies dormant since Apr 2026; Robinhood Chain leg of syrupUSDG exists in Dune data.
-
-**Next (this week)** — syrupUSDG module, both chains
-- Ethereum `0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a` + Robinhood Chain deployment
-- Transfer events + periodic `totalAssets()`, ~10 weeks of history
-- Reusable: takes address + chain + ABI, not a one-off script
-- Reconcile vs Etherscan supply and Maple's Dune figure before publishing
-
-**Then** — piece one: syrupUSDG concentration, 3 live charts, disclosure block, repo linked.
+## What's indexed
+- syrupUSDG pool (Ethereum + Robinhood Chain): transfers, loans, interest, `totalAssets()` state
+- Robinhood Earn: Steakhouse USDG vault deposits/withdrawals, Morpho Blue market flows and allocation
+- Robinhood stock tokens: mint/burn events; Morpho markets using them as collateral
+- USDG supply on Robinhood Chain (mint/burn only — never full transfer history)
+- SYRUP price (CoinGecko) and buybacks (`config/syrup_buybacks.csv`)
 
 ## RPC notes
-- Alchemy free tier: `eth_getLogs` capped at 10-block range. Fine for `eth_call`, useless for backfill.
-- Infura free tier: no range cap. Use for logs.
-- Public RPCs tested (publicnode, llamarpc, drpc, 1rpc, merkle): none usable for ranged getLogs.
+- Alchemy free tier: `eth_getLogs` capped at 10-block range and throttles (429) on burst. Use for `eth_call` only.
+- Infura free tier: no range cap — use for Ethereum logs and blocks. Rate-limit errors come back *inside* HTTP-200 batch responses; check every item has `result`.
+- Robinhood Chain: public RPC handles 2M-block `getLogs` chunks; keep Alchemy block lookups ≤2 threads.
+- Robinhood block timestamps: exact for syrup transfers/markets, anchor + interpolation for the ~290k Morpho blocks (daily buckets only).
+- Neon drops idle connections during long fetches: fresh connection per insert, `COPY` not `executemany`. Raw rows are pruned after decode to stay under the 512 MB free tier.
 
 ## Setup
     pip install -r requirements.txt
-    cp .env.example .env      # RPC_URL (Alchemy), INFURA_URL
+    cp .env.example .env      # RPC_URL (Alchemy), INFURA_URL, DATABASE_URL
 
 ## Layout
-    config/     contract map, ABIs, dashboard inventory
-    pipeline/   fetch_logs.py · decode.py · validate.py  (full 8-table backfill; deferred)
-    db/         maple.duckdb
+    config/       contract map (contracts.csv), ABI + event bundle (abis.json), buybacks csv
+    pipeline/     fetch_logs.py · fetch_blocks.py · decode.py · state · fetch_llama.py · run_all.py
+    pipeline/experimental/  parked block sampler

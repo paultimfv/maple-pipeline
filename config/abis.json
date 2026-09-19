@@ -6741,7 +6741,7 @@
     "collateralAsset_",
     "newSlippage_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6766,7 +6766,7 @@
     "principal_",
     "netInterest_"
    ],
-   "dune_table": "loanmanager_evt_fundsdistributed",
+   "decoded_table": "loanmanager_evt_fundsdistributed",
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6790,7 +6790,7 @@
     "issuanceRate_",
     "accountedInterest_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6812,7 +6812,7 @@
     "loanTransferAdmin_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6837,7 +6837,7 @@
     "delegateManagementFee_",
     "platformManagementFee_"
    ],
-   "dune_table": "loanmanager_evt_managementfeespaid",
+   "decoded_table": "loanmanager_evt_managementfeespaid",
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6860,7 +6860,7 @@
     "collateralAsset_",
     "newMinRatio_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6890,7 +6890,7 @@
     "netRefinanceInterest_",
     "newRate_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6913,7 +6913,7 @@
     "paymentId_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6935,7 +6935,7 @@
    "data": [
     "principalOut_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6957,7 +6957,7 @@
    "data": [
     "unrealizedLosses_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -6980,7 +6980,7 @@
     "toVersion_",
     "arguments_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xd05998a1940294e3e49f99dbb13fe20a3483f5ae",
     "0x373bdcf21f6a939713d5de94096ffdb24a406391",
@@ -7004,7 +7004,7 @@
    "data": [
     "amount"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7018,7 +7018,7 @@
    "topic0": "0xf82141db4260bd315c4143a3791ae7d00593cc834891fadde268d54e2da75c34",
    "indexed": [],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7034,7 +7034,7 @@
    "data": [
     "feeRate"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7050,7 +7050,7 @@
    "data": [
     "fees"
    ],
-   "dune_table": "mapleaavestrategy_evt_strategyfeescollected",
+   "decoded_table": "mapleaavestrategy_evt_strategyfeescollected",
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7066,7 +7066,7 @@
    "data": [
     "assets"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7083,7 +7083,7 @@
     "assets",
     "shares"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7097,7 +7097,7 @@
    "topic0": "0x1b4bdf15e9083497b4929bf7a5dbe5bc33142228d131e43e84a546ecb0518df1",
    "indexed": [],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7113,7 +7113,7 @@
    "data": [
     "updateAccounting"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7129,7 +7129,7 @@
    "data": [
     "assets"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7146,7 +7146,7 @@
     "assets",
     "shares"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7163,7 +7163,7 @@
     "toVersion_",
     "arguments_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x2b817b822b0ddd4597a92dbed1bd0a6796ca37e0",
     "0x560b3a85af1cef113bb60105d0cf21e1d05f91d4",
@@ -7181,7 +7181,7 @@
     "delegateOriginationFee_",
     "delegateServiceFee_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xfeaca6a5703e6f9de0ebe0975c93ae34c00523f2"
    ]
@@ -7197,7 +7197,7 @@
     "delegateOriginationFee_",
     "platformOriginationFee_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xfeaca6a5703e6f9de0ebe0975c93ae34c00523f2"
    ]
@@ -7213,7 +7213,7 @@
     "partialPlatformServiceFee_",
     "partialDelegateServiceFee_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xfeaca6a5703e6f9de0ebe0975c93ae34c00523f2"
    ]
@@ -7228,7 +7228,7 @@
     "loan_",
     "platformServiceFee_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0xfeaca6a5703e6f9de0ebe0975c93ae34c00523f2"
    ]
@@ -7246,7 +7246,7 @@
     "platformServiceFee_",
     "partialRefinancePlatformServiceFee_"
    ],
-   "dune_table": "mapleloanfeemanager_evt_servicefeespaid",
+   "decoded_table": "mapleloanfeemanager_evt_servicefeespaid",
    "emitter_addresses": [
     "0xfeaca6a5703e6f9de0ebe0975c93ae34c00523f2"
    ]
@@ -7263,7 +7263,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7297,7 +7297,7 @@
     "shares_",
     "bootStrapMintAmount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7330,7 +7330,7 @@
     "assets_",
     "shares_"
    ],
-   "dune_table": "pool_v2_evt_deposit",
+   "decoded_table": "pool_v2_evt_deposit",
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7360,7 +7360,7 @@
     "newOwner_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7390,7 +7390,7 @@
     "pendingOwner_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7422,7 +7422,7 @@
     "shares_",
     "escrowedShares_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7453,7 +7453,7 @@
    "data": [
     "shares_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7485,7 +7485,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7519,7 +7519,7 @@
     "assets_",
     "shares_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7551,7 +7551,7 @@
     "assets_",
     "escrowedShares_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
     "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
@@ -7580,7 +7580,7 @@
     "psm"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7593,7 +7593,7 @@
    "topic0": "0xf82141db4260bd315c4143a3791ae7d00593cc834891fadde268d54e2da75c34",
    "indexed": [],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7608,7 +7608,7 @@
    "data": [
     "feeRate"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7623,7 +7623,7 @@
    "data": [
     "fees"
    ],
-   "dune_table": "mapleskystrategy_evt_strategyfeescollected",
+   "decoded_table": "mapleskystrategy_evt_strategyfeescollected",
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7638,7 +7638,7 @@
    "data": [
     "assets"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7654,7 +7654,7 @@
     "assets",
     "shares"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7667,7 +7667,7 @@
    "topic0": "0x1b4bdf15e9083497b4929bf7a5dbe5bc33142228d131e43e84a546ecb0518df1",
    "indexed": [],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7682,7 +7682,7 @@
    "data": [
     "updateAccounting"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7697,7 +7697,7 @@
    "data": [
     "assets"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7713,7 +7713,7 @@
     "assets",
     "shares"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7729,7 +7729,7 @@
     "toVersion_",
     "arguments_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x859c9980931fa0a63765fd8ef2e29918af5b038c",
     "0xe3ee1b26af5396cec45c8c3b4c4fd5136a2455cc"
@@ -7745,7 +7745,7 @@
     "issuanceRate_",
     "accountedInterest_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7778,7 +7778,7 @@
     "platformManagementFee_",
     "platformServiceFee_"
    ],
-   "dune_table": "opentermloanmanager_evt_claimedfundsdistributed",
+   "decoded_table": "opentermloanmanager_evt_claimedfundsdistributed",
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7809,7 +7809,7 @@
     "platformManagementFee_",
     "platformServiceFee_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7839,7 +7839,7 @@
     "toPool_",
     "toTreasury_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7870,7 +7870,7 @@
     "paymentDueDate_",
     "issuanceRate_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7896,7 +7896,7 @@
     "loan_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7922,7 +7922,7 @@
    "data": [
     "principalOut_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7948,7 +7948,7 @@
    "data": [
     "unrealizedLosses_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -7975,7 +7975,7 @@
     "toVersion_",
     "arguments_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x6aceb4caba81fa6a8065059f3a944fb066a10fac",
     "0xb50d675f3c6d18ce5ccac691354f92afebd1675e",
@@ -8004,7 +8004,7 @@
     "amount",
     "depositData"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x191ac16255f49f7c6cb2e3b2502064a805943849"
    ]
@@ -8018,7 +8018,7 @@
     "borrower_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -8178,7 +8178,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -8340,7 +8340,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -8503,7 +8503,7 @@
     "amount_",
     "nextPaymentDueDate_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -8665,7 +8665,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -8827,7 +8827,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -8987,7 +8987,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -9147,7 +9147,7 @@
    "data": [
     "nextPaymentDueDate_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -9315,7 +9315,7 @@
     "rates_",
     "fees_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -9475,7 +9475,7 @@
     "lender_"
    ],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -9637,7 +9637,7 @@
     "interestPaid_",
     "feesPaid_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -9797,7 +9797,7 @@
    "data": [
     "nextPaymentDueDate_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -9960,7 +9960,7 @@
     "deadline_",
     "calls_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -10123,7 +10123,7 @@
     "deadline_",
     "calls_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -10286,7 +10286,7 @@
     "deadline_",
     "calls_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -10448,7 +10448,7 @@
     "interestPaid_",
     "fees_"
    ],
-   "dune_table": "fixedtermloan_evt_paymentmade",
+   "decoded_table": "fixedtermloan_evt_paymentmade",
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -10608,7 +10608,7 @@
    "data": [
     "pendingBorrower_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -10768,7 +10768,7 @@
    "data": [
     "pendingLender_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -10931,7 +10931,7 @@
     "collateralRepossessed_",
     "fundsRepossessed_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -11094,7 +11094,7 @@
    "data": [
     "amount_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -11255,7 +11255,7 @@
     "toVersion_",
     "arguments_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": [
     "0x3e36372119f12dee3de6c260cc7283557c24f471",
     "0x1f2bca37106b30c4d72d8e60ebd2bfeaa10bffe2",
@@ -11413,7 +11413,7 @@
    "topic0": "0xf82141db4260bd315c4143a3791ae7d00593cc834891fadde268d54e2da75c34",
    "indexed": [],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11425,7 +11425,7 @@
    "data": [
     "feeRate"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11437,7 +11437,7 @@
    "data": [
     "fees"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11449,7 +11449,7 @@
    "data": [
     "assets"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11462,7 +11462,7 @@
     "assets",
     "shares"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11472,7 +11472,7 @@
    "topic0": "0x1b4bdf15e9083497b4929bf7a5dbe5bc33142228d131e43e84a546ecb0518df1",
    "indexed": [],
    "data": [],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11484,7 +11484,7 @@
    "data": [
     "updateAccounting"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11496,7 +11496,7 @@
    "data": [
     "assets"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11509,7 +11509,7 @@
     "assets",
     "shares"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   },
   {
@@ -11522,7 +11522,7 @@
     "toVersion_",
     "arguments_"
    ],
-   "dune_table": null,
+   "decoded_table": null,
    "emitter_addresses": []
   }
  ]
