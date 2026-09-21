@@ -20,4 +20,5 @@ jobs:
           INFURA_URL:   ${{ secrets.INFURA_URL }}
           RPC_URL:      ${{ secrets.RPC_URL }}
           RH_RPC_URL:   https://rpc.mainnet.chain.robinhood.com
+          BLOCKSCOUT_KEY: ${{ secrets.BLOCKSCOUT_KEY }}
         run: python -u run_all.py 2>&1 | tr '\r' '\n' | grep -vE '^\s+(anchors|[0-9,]+\s)' 

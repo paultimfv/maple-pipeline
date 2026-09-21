@@ -22,6 +22,8 @@ and are labeled as such on the dashboard.
 - Robinhood stock tokens: mint/burn events; Morpho markets using them as collateral
 - USDG supply on Robinhood Chain (mint/burn only — never full transfer history)
 - SYRUP price (CoinGecko) and buybacks (`config/syrup_buybacks.csv`)
+- Robinhood Chain activity (Blockscout stats-service: txns, accounts, gas fees, smart wallets) and token holder counts (Blockscout REST, `BLOCKSCOUT_KEY`)
+- Capital on chain: ETH in the canonical L1 bridge (`0xDf87…`, docs.robinhood.com/chain/protocol-contracts) + USDG minted natively; sequencer batch cost from the SequencerInbox on Ethereum
 
 ## RPC notes
 - Alchemy free tier: `eth_getLogs` capped at 10-block range and throttles (429) on burst. Use for `eth_call` only.
@@ -32,9 +34,9 @@ and are labeled as such on the dashboard.
 
 ## Setup
     pip install -r requirements.txt
-    cp .env.example .env      # RPC_URL (Alchemy), INFURA_URL, DATABASE_URL
+    cp .env.example .env      # RPC_URL (Alchemy), INFURA_URL, DATABASE_URL, BLOCKSCOUT_KEY
 
 ## Layout
     config/       contract map (contracts.csv), ABI + event bundle (abis.json), buybacks csv
-    pipeline/     fetch_logs.py · fetch_blocks.py · decode.py · state · fetch_llama.py · run_all.py
+    pipeline/     fetch_logs.py · fetch_blocks.py · decode.py · fetch_state.py · fetch_llama.py · fetch_syrup.py · fetch_blockscout.py · fetch_bridge.py · fetch_l1_cost.py · run_all.py
     pipeline/experimental/  parked block sampler

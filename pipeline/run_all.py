@@ -1,6 +1,6 @@
-"""Daily job: logs -> block times -> decode -> prune -> state -> llama. Every step is incremental/idempotent."""
+"""Daily job: logs -> block times -> decode -> prune -> state -> llama -> syrup -> blockscout -> bridge -> l1 cost. Every step is incremental/idempotent."""
 import datetime as dt, traceback
-import fetch_logs, fetch_blocks, decode, fetch_state, fetch_llama, fetch_syrup, subprocess, sys, os
+import fetch_logs, fetch_blocks, decode, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, subprocess, sys, os
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
@@ -22,6 +22,9 @@ if __name__ == "__main__":
         ("state",  fetch_state.main),
         ("llama",  fetch_llama.main),
         ("syrup",  fetch_syrup.main),
+        ("blockscout", fetch_blockscout.main),   # raw chain activity + holder counts
+        ("bridge", fetch_bridge.main),           # ETH in the canonical L1 bridge
+        ("l1_cost", fetch_l1_cost.main),         # sequencer batch cost on Ethereum
     ]
     for name, fn in steps:
         try: fn(); print(f"--- {name} ok")

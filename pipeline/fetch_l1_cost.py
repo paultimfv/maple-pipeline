@@ -24,8 +24,9 @@ def batch(calls):
 def main():
     with db() as conn:
         row = conn.execute("SELECT last_block FROM checkpoint WHERE event_key='eth.RH.SequencerBatch'").fetchone()
-        frm = row[0] + 1 if row else 22_400_000   # ~Apr 2026
-        head = eth.eth.block_number; chunk = 50_000
+    frm = row[0] + 1 if row else 22_400_000   # ~Apr 2026
+    head = eth.eth.block_number; chunk = 50_000
+    if True:
         while frm <= head:
             to = min(frm + chunk - 1, head)
             try: logs = eth.eth.get_logs({"address": INBOX, "topics": [TOPIC], "fromBlock": frm, "toBlock": to})
@@ -42,11 +43,14 @@ def main():
                     gas = int(r["gasUsed"], 16); fee = gas * int(r["effectiveGasPrice"], 16) / 1e18
                     blob = int(r.get("blobGasUsed", "0x0"), 16) * int(r.get("blobGasPrice", "0x0"), 16) / 1e18
                     rows.append((h, b, dt.datetime.fromtimestamp(int(bt[str(b)]["timestamp"], 16), dt.timezone.utc), gas, fee + blob, blob))
-            with conn.cursor() as cur:
-                cur.executemany("INSERT INTO rh_l1_batches VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", rows)
-            conn.execute("INSERT INTO checkpoint VALUES ('eth.RH.SequencerBatch',%s) ON CONFLICT (event_key) DO UPDATE SET last_block=EXCLUDED.last_block", (to,))
-            conn.commit(); print(f"  {to:,} +{len(rows)} batches", end="\r"); frm = to + 1
-        print(); print(conn.execute("SELECT count(*), min(block_time)::date, max(block_time)::date, sum(fee_eth) FROM rh_l1_batches").fetchone())
+            with db() as conn:   # Neon drops idle connections during long fetches: fresh connection per chunk
+                with conn.cursor() as cur:
+                    cur.executemany("INSERT INTO rh_l1_batches VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", rows)
+                conn.execute("INSERT INTO checkpoint VALUES ('eth.RH.SequencerBatch',%s) ON CONFLICT (event_key) DO UPDATE SET last_block=EXCLUDED.last_block", (to,))
+                conn.commit()
+            print(f"  {to:,} +{len(rows)} batches", end="\r"); frm = to + 1
+        print()
+        with db() as conn: print(conn.execute("SELECT count(*), min(block_time)::date, max(block_time)::date, sum(fee_eth) FROM rh_l1_batches").fetchone())
 
 if __name__ == "__main__":
     main()

@@ -223,3 +223,12 @@ CREATE TABLE IF NOT EXISTS stock_token_flows (
   amount       numeric NOT NULL,  -- shares (18 dec applied)
   PRIMARY KEY (tx_hash, log_index)
 );
+
+-- Blockscout raw chain activity (stats-service, no key)
+CREATE TABLE IF NOT EXISTS bs_chain_daily (
+  day date PRIMARY KEY, txns numeric, active_accounts numeric, new_accounts numeric, fees_eth numeric, avg_fee_eth numeric,
+  new_contracts numeric, user_ops numeric, new_aa_wallets numeric, success_rate numeric);
+-- token holder counts from Blockscout REST (daily snapshot)
+CREATE TABLE IF NOT EXISTS bs_holders (day date, token text, address text, holders bigint, transfers bigint, PRIMARY KEY (day, token));
+-- ETH locked in the canonical L1 bridge (Arbitrum Orbit), daily
+CREATE TABLE IF NOT EXISTS bridge_tvl (day date PRIMARY KEY, block_number bigint, eth_bridged numeric);
