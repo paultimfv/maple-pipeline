@@ -14,7 +14,8 @@ URL = BATCH_RPC["ethereum"]
 def batch(calls):
     delay = 1
     for _ in range(8):
-        r = requests.post(URL, json=calls, timeout=90)
+        try: r = requests.post(URL, json=calls, timeout=90)
+        except requests.RequestException: time.sleep(delay); delay = min(delay*2, 30); continue   # Infura read timeouts
         if r.status_code == 429: time.sleep(delay); delay = min(delay*2, 30); continue
         out = r.json()
         if any("result" not in x for x in out): time.sleep(delay); delay = min(delay*2, 30); continue

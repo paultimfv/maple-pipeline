@@ -23,6 +23,7 @@ and are labeled as such on the dashboard.
 - USDG supply on Robinhood Chain (mint/burn only — never full transfer history)
 - SYRUP price (CoinGecko) and buybacks (`config/syrup_buybacks.csv`)
 - Robinhood Chain activity (Blockscout stats-service: txns, accounts, gas fees, smart wallets) and token holder counts (Blockscout REST, `BLOCKSCOUT_KEY`)
+- Stablecoin supply on Robinhood Chain: daily `totalSupply()` of USDG, USDe, syrupUSDG, mGLO, spUSDG (canonical contracts only)
 - Capital on chain: ETH in the canonical L1 bridge (`0xDf87…`, docs.robinhood.com/chain/protocol-contracts) + USDG minted natively; sequencer batch cost from the SequencerInbox on Ethereum
 
 ## RPC notes
@@ -38,5 +39,5 @@ and are labeled as such on the dashboard.
 
 ## Layout
     config/       contract map (contracts.csv), ABI + event bundle (abis.json), buybacks csv
-    pipeline/     fetch_logs.py · fetch_blocks.py · decode.py · fetch_state.py · fetch_llama.py · fetch_syrup.py · fetch_blockscout.py · fetch_bridge.py · fetch_l1_cost.py · run_all.py
+    pipeline/     fetch_logs.py · fetch_blocks.py · decode.py · fetch_state.py · fetch_llama.py · fetch_syrup.py · fetch_blockscout.py · fetch_bridge.py · fetch_stables.py · fetch_l1_cost.py · run_all.py
     pipeline/experimental/  parked block sampler

@@ -232,3 +232,5 @@ CREATE TABLE IF NOT EXISTS bs_chain_daily (
 CREATE TABLE IF NOT EXISTS bs_holders (day date, token text, address text, holders bigint, transfers bigint, PRIMARY KEY (day, token));
 -- ETH locked in the canonical L1 bridge (Arbitrum Orbit), daily
 CREATE TABLE IF NOT EXISTS bridge_tvl (day date PRIMARY KEY, block_number bigint, eth_bridged numeric);
+-- stablecoin totalSupply on Robinhood Chain, daily (eth_call)
+CREATE TABLE IF NOT EXISTS rh_stable_supply (day date, token text, kind text, block_number bigint, supply numeric, PRIMARY KEY (day, token));
