@@ -414,3 +414,15 @@ SELECT month, count(DISTINCT owner) AS active_lenders,
        sum(count(DISTINCT owner) FILTER (WHERE cohort = month)) OVER (ORDER BY month) AS cumulative_lenders,
        count(*) AS deposits, sum(assets) AS deposited_usd
 FROM d GROUP BY month ORDER BY month;
+
+-- Maple-reported pool state (API), daily from 2026-10; earlier history from the Dune export of the same dataset
+CREATE TABLE IF NOT EXISTS maple_pool_state (
+  day date NOT NULL, pool text NOT NULL, pool_address text, tvl_usd numeric NOT NULL,
+  collateral_usd numeric NOT NULL, principal_out_usd numeric NOT NULL, PRIMARY KEY (day, pool));
+
+CREATE OR REPLACE VIEW aum_reported AS
+SELECT date::date AS day, deposits_usd, collateral_usd, deposits_usd + collateral_usd AS aum_usd, 'dune export' AS source
+FROM dune.pool_aum_vs_deposits_over_time_protocol_totals
+WHERE date::date < coalesce((SELECT min(day) FROM maple_pool_state), '2999-01-01')
+UNION ALL
+SELECT day, sum(tvl_usd - collateral_usd), sum(collateral_usd), sum(tvl_usd), 'maple api' FROM maple_pool_state GROUP BY day;
