@@ -27,6 +27,8 @@ TOPIC = {
     "ft_orig":   T("OriginationFeesPaid(address,uint256,uint256)"),
     "strategy":  T("StrategyFeesCollected(uint256)"),
     "deployed":  T("InstanceDeployed(uint256,address,bytes)"),
+    "p_dep":     T("Deposit(address,address,uint256,uint256)"),
+    "r_dep":     T("DepositData(address,uint256,bytes32)"),
 }
 addr = lambda topic: "0x" + topic[-40:]
 TOKEN_BY_ADDR = {v: k for k, v in RH_TOKENS.items()}
@@ -143,6 +145,7 @@ def run():
         # ethereum: every other Maple fee (fixed-term mgmt/service/origination, strategy fees)
         reg = load_contracts()
         loan_dec = {r["address"].lower(): int(r["decimals"] or 6) for r in csv.DictReader(open(ROOT / "config" / "fixed_term_loans.csv"))}
+        loan_dec.update({r[0]: r[1] for r in conn.execute("SELECT loan, decimals FROM loan_assets")})   # eth_call fundsAsset(), wins over the CSV
         dec_of = lambda a: 10 ** int(reg.get(a, {}).get("decimals") or 6)
         out = []
         for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["ft_mgmt"]):
@@ -159,8 +162,25 @@ def run():
         for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["strategy"]):
             (fees,) = data_words(data, 1); d = dec_of(a)
             out.append((bt, bn, tx, li, "strategy", a, None, int(math.log10(d)), fees / d, 0))
-        cur.executemany("INSERT INTO protocol_fees VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        cur.executemany("""INSERT INTO protocol_fees VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (tx_hash, log_index) DO UPDATE
+            SET decimals=EXCLUDED.decimals, platform_fee=EXCLUDED.platform_fee, delegate_fee=EXCLUDED.delegate_fee""", out)
         print("protocol_fees", len(out))
+
+        # lenders: deposits into every USD pool (owner = the account that receives pool shares)
+        usd_pools = {a for a, r in reg.items() if r["contract_type"] == "MaplePool" and int(r["decimals"] or 6) == 6}
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["p_dep"]):
+            if a not in usd_pools: continue
+            assets, shares = data_words(data, 2)
+            out.append((bt, bn, tx, li, a, addr(topics[1]), addr(topics[2]), assets / 1e6))
+        cur.executemany("INSERT INTO pool_deposits VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("pool_deposits", len(out))
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["r_dep"]):
+            amount, _ = abi_decode(["uint256", "bytes32"], bytes.fromhex(data[2:]))
+            out.append((bt, bn, tx, li, a, addr(topics[1]), amount / 1e6))
+        cur.executemany("INSERT INTO router_deposits VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("router_deposits", len(out))
 
         # factory deployments: audit trail for contracts that appear after the registry was built
         out = []

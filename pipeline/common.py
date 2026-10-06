@@ -145,7 +145,23 @@ def tracked_events():
                     t("InstanceDeployed(uint256,address,bytes)")],
          "addresses": by_type("FixedTermLoanManager", "MapleSkyStrategy", "MapleAaveStrategy")
                       + [FEE_MANAGER] + list(FACTORIES.values()),
+         # which emitter emits which event (lets a per-address backfill skip empty combinations)
+         "blockscout_pairs": [(a, t("ManagementFeesPaid(address,uint256,uint256)")) for a in by_type("FixedTermLoanManager")]
+                      + [(FEE_MANAGER, t("ServiceFeesPaid(address,uint256,uint256,uint256,uint256)")),
+                         (FEE_MANAGER, t("OriginationFeesPaid(address,uint256,uint256)"))]
+                      + [(a, t("StrategyFeesCollected(uint256)")) for a in by_type("MapleSkyStrategy", "MapleAaveStrategy")]
+                      + [(a, t("InstanceDeployed(uint256,address,bytes)")) for a in FACTORIES.values()],
          "from_block": 16_000_000},
+        # lenders: ERC-4626 Deposit(sender idx, owner idx, assets, shares) on every USD pool
+        {"key": "eth.Pool.Deposit", "chain": "ethereum", "topic0": t("Deposit(address,address,uint256,uint256)"),
+         "addresses": [a for a, (_, _, dec) in pools().items() if dec == 6],
+         "blockscout_pairs": [(a, t("Deposit(address,address,uint256,uint256)")) for a, (_, _, dec) in pools().items() if dec == 6],
+         "from_block": 16_000_000},
+        # lenders behind the SyrupRouters (pool Deposit shows the router as owner): DepositData(owner idx, amount, depositData)
+        {"key": "eth.Router.DepositData", "chain": "ethereum", "topic0": t("DepositData(address,uint256,bytes32)"),
+         "addresses": by_type("SyrupRouter"),
+         "blockscout_pairs": [(a, t("DepositData(address,uint256,bytes32)")) for a in by_type("SyrupRouter")],
+         "from_block": 19_000_000},
         {"key": "eth.OTLM.PrincipalOutUpdated", "chain": "ethereum", "topic0": t("PrincipalOutUpdated(uint128)"),
          "addresses": [SYRUPUSDG_OTLM], "from_block": 22_500_000},
         # loan Initialized has no fixed emitter (each loan is its own contract) -> filter by indexed lender_ = OTLM

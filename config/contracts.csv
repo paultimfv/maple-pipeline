@@ -238,3 +238,6 @@ address,contract_type,official_name,pool_group,status,decimals,impl_address,even
 0xfdc7541201aa6831a64f96582111ced633fa5078,FixedTermLoanManager,FixedTermLoanManager,Orthogonal USDC,inactive,6,0x5b97c9dcce2693844b90cea40ba1fd15bf99eb01,3,2022-12-12,2023-01-22,yes,
 0xb9bae8c63593e51a296857ac4c150bae31a4e2c3,PoolDelegateCover,PoolDelegateCover,Orthogonal USDC,inactive,6,,,,,yes,
 0xd8f8bd488ba6ddf2a710f6c357a884fd1706981a,WithdrawalManagerCyclical,WithdrawalManagerCyclical,Orthogonal USDC,inactive,6,,,,,yes,
+0x6a956aa2d183b6b5e9d9f64b1c137098bef627ea,MaplePool,MISLUSDC2Pool,Maple Institutional - Secured Lending 2,active,6,,,2026-09-28,,no,found by factory audit (InstanceDeployed) 2026-10-06; not in official registry
+0x462e6203176b41b741b3dd03db14ffb29fcfa693,PoolManager,PoolManager,Maple Institutional - Secured Lending 2,active,6,,,2026-09-28,,no,found by factory audit (InstanceDeployed) 2026-10-06; not in official registry
+0x7d4c8157c29baff70d5d08ce57eaf32820415e12,OpenTermLoanManager,OpenTermLoanManager,Maple Institutional - Secured Lending 2,active,6,,,2026-09-28,,no,found by factory audit (InstanceDeployed) 2026-10-06; not in official registry

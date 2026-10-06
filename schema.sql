@@ -365,3 +365,52 @@ GROUP BY 1 ORDER BY 1;
 
 -- global USD stablecoin supply, all chains (DeFiLlama; macro context, cited)
 CREATE TABLE IF NOT EXISTS stablecoin_supply (day date PRIMARY KEY, supply_usd numeric NOT NULL);
+
+-- lenders: every deposit into a USD Maple pool (Dune 8714452 / 8714443 used tx.from; here owner = share recipient)
+CREATE TABLE IF NOT EXISTS pool_deposits (
+  block_time timestamptz NOT NULL, block_number bigint NOT NULL, tx_hash text NOT NULL, log_index integer NOT NULL,
+  pool text NOT NULL, sender text NOT NULL, owner text NOT NULL, assets numeric NOT NULL,
+  PRIMARY KEY (tx_hash, log_index));
+
+-- borrowers: loan contract -> borrower (loan.borrower())
+CREATE TABLE IF NOT EXISTS loan_borrowers (loan text PRIMARY KEY, borrower text NOT NULL);
+
+CREATE OR REPLACE VIEW monthly_lenders AS
+WITH d AS (SELECT date_trunc('month', block_time)::date AS month, owner, assets,
+                  min(date_trunc('month', block_time)) OVER (PARTITION BY owner)::date AS cohort FROM pool_deposits)
+SELECT month, count(DISTINCT owner) AS active_lenders,
+       count(DISTINCT owner) FILTER (WHERE cohort = month) AS new_lenders,
+       sum(count(DISTINCT owner) FILTER (WHERE cohort = month)) OVER (ORDER BY month) AS cumulative_lenders,
+       count(*) AS deposits, sum(assets) AS deposited_usd
+FROM d GROUP BY month ORDER BY month;
+
+-- borrowers active = made at least one payment that month (open-term ClaimedFundsDistributed + fixed-term fees)
+CREATE OR REPLACE VIEW monthly_borrowers AS
+WITH p AS (SELECT date_trunc('month', block_time)::date AS month, loan, principal, net_interest + delegate_mgmt_fee + delegate_service_fee + platform_mgmt_fee + platform_service_fee AS interest
+           FROM claimed_funds WHERE otlm <> '0xe3aac29001c769fafcef0df072ca396e310ed13b'
+           UNION ALL SELECT date_trunc('month', block_time)::date, loan, 0, 0 FROM protocol_fees WHERE loan IS NOT NULL AND decimals = 6),
+     b AS (SELECT p.*, lb.borrower, min(p.month) OVER (PARTITION BY lb.borrower) AS cohort FROM p JOIN loan_borrowers lb USING (loan))
+SELECT month, count(DISTINCT borrower) AS active_borrowers,
+       count(DISTINCT borrower) FILTER (WHERE cohort = month) AS new_borrowers,
+       sum(count(DISTINCT borrower) FILTER (WHERE cohort = month)) OVER (ORDER BY month) AS cumulative_borrowers,
+       count(DISTINCT loan) AS active_loans, sum(interest) AS interest_paid_usd, sum(principal) AS principal_repaid_usd
+FROM b GROUP BY month ORDER BY month;
+
+-- SyrupRouter DepositData: the actual depositor behind router deposits (pool Deposit shows the router as owner)
+CREATE TABLE IF NOT EXISTS router_deposits (
+  block_time timestamptz NOT NULL, block_number bigint NOT NULL, tx_hash text NOT NULL, log_index integer NOT NULL,
+  router text NOT NULL, owner text NOT NULL, amount numeric NOT NULL, PRIMARY KEY (tx_hash, log_index));
+CREATE TABLE IF NOT EXISTS loan_assets (loan text PRIMARY KEY, asset text NOT NULL, decimals integer NOT NULL);
+
+-- lenders = router depositors + direct pool depositors (excluding deposits the router made on someone's behalf)
+CREATE OR REPLACE VIEW monthly_lenders AS
+WITH routers AS (SELECT DISTINCT router AS a FROM router_deposits),
+     all_dep AS (SELECT block_time, owner, amount AS assets FROM router_deposits
+                 UNION ALL SELECT block_time, owner, assets FROM pool_deposits WHERE owner NOT IN (SELECT a FROM routers)),
+     d AS (SELECT date_trunc('month', block_time)::date AS month, owner, assets,
+                  min(date_trunc('month', block_time)) OVER (PARTITION BY owner)::date AS cohort FROM all_dep)
+SELECT month, count(DISTINCT owner) AS active_lenders,
+       count(DISTINCT owner) FILTER (WHERE cohort = month) AS new_lenders,
+       sum(count(DISTINCT owner) FILTER (WHERE cohort = month)) OVER (ORDER BY month) AS cumulative_lenders,
+       count(*) AS deposits, sum(assets) AS deposited_usd
+FROM d GROUP BY month ORDER BY month;
