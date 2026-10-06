@@ -2,9 +2,10 @@
 Decode raw_logs -> rh_transfers, morpho_flows, morpho_markets, claimed_funds, loan_events.
 Idempotent (ON CONFLICT DO NOTHING). Rows without a block timestamp yet are skipped and picked up next run.
 """
+import csv, math
 from eth_abi import decode as abi_decode
 from web3 import Web3
-from common import (db, RH_TOKENS, RH_USDG, RH_EARN_VAULT_V2, RH_MORPHO_BLUE, RH_COLLATERAL_SYMBOLS, RH_EARN_VAULT, ZERO, WETH_OTLM)
+from common import (db, ROOT, load_contracts, RH_TOKENS, RH_USDG, RH_EARN_VAULT_V2, RH_MORPHO_BLUE, RH_COLLATERAL_SYMBOLS, RH_EARN_VAULT, ZERO, WETH_OTLM, FEE_MANAGER)
 
 T = lambda s: "0x" + Web3.keccak(text=s).hex()
 TOPIC = {
@@ -21,6 +22,11 @@ TOPIC = {
     "claimed":   T("ClaimedFundsDistributed(address,uint256,uint256,uint256,uint256,uint256,uint256)"),
     "pout":      T("PrincipalOutUpdated(uint128)"),
     "init":      T("Initialized(address,address,address,uint256,uint32[3],uint64[4])"),
+    "ft_mgmt":   T("ManagementFeesPaid(address,uint256,uint256)"),
+    "ft_service": T("ServiceFeesPaid(address,uint256,uint256,uint256,uint256)"),
+    "ft_orig":   T("OriginationFeesPaid(address,uint256,uint256)"),
+    "strategy":  T("StrategyFeesCollected(uint256)"),
+    "deployed":  T("InstanceDeployed(uint256,address,bytes)"),
 }
 addr = lambda topic: "0x" + topic[-40:]
 TOKEN_BY_ADDR = {v: k for k, v in RH_TOKENS.items()}
@@ -133,6 +139,35 @@ def run():
             out.append((bt, bn, tx, li, "initialized", addr(topics[2]), a, addr(topics[1]), principal / 1e6, rates[1] / 1e18, None))
         cur.executemany("INSERT INTO loan_events VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
         print("loan_events", len(out))
+
+        # ethereum: every other Maple fee (fixed-term mgmt/service/origination, strategy fees)
+        reg = load_contracts()
+        loan_dec = {r["address"].lower(): int(r["decimals"] or 6) for r in csv.DictReader(open(ROOT / "config" / "fixed_term_loans.csv"))}
+        dec_of = lambda a: 10 ** int(reg.get(a, {}).get("decimals") or 6)
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["ft_mgmt"]):
+            dm, pm = data_words(data, 2); d = dec_of(a)
+            out.append((bt, bn, tx, li, "ft_mgmt", a, addr(topics[1]), int(math.log10(d)), pm / d, dm / d))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["ft_service"], FEE_MANAGER):
+            loan, d1, d2, p1, p2 = abi_decode(["address", "uint256", "uint256", "uint256", "uint256"], bytes.fromhex(data[2:]))
+            d = 10 ** loan_dec.get(loan.lower(), 6)
+            out.append((bt, bn, tx, li, "ft_service", a, loan.lower(), int(math.log10(d)), (p1 + p2) / d, (d1 + d2) / d))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["ft_orig"], FEE_MANAGER):
+            loan, do, po = abi_decode(["address", "uint256", "uint256"], bytes.fromhex(data[2:]))
+            d = 10 ** loan_dec.get(loan.lower(), 6)
+            out.append((bt, bn, tx, li, "ft_origination", a, loan.lower(), int(math.log10(d)), po / d, do / d))
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["strategy"]):
+            (fees,) = data_words(data, 1); d = dec_of(a)
+            out.append((bt, bn, tx, li, "strategy", a, None, int(math.log10(d)), fees / d, 0))
+        cur.executemany("INSERT INTO protocol_fees VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("protocol_fees", len(out))
+
+        # factory deployments: audit trail for contracts that appear after the registry was built
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["deployed"]):
+            out.append((a, addr(topics[2]), int(topics[1], 16), bt, bn, tx, addr(topics[2]) in reg))
+        cur.executemany("INSERT INTO factory_instances VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("factory_instances", len(out))
         conn.commit()
 
 if __name__ == "__main__":

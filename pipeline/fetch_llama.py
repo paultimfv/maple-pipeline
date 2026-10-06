@@ -1,4 +1,5 @@
-"""DeFiLlama -> Robinhood Chain macro: TVL, fees, revenue, DEX volume (chain totals + per-protocol daily). No key."""
+"""DeFiLlama -> macro context only: Robinhood Chain TVL/fees/revenue/DEX volume, and global stablecoin supply
+(the model's top-line driver). Nothing Maple-specific comes from here. No key."""
 import datetime as dt, time, requests
 from common import db
 
@@ -33,7 +34,11 @@ def main():
             cur.executemany("INSERT INTO llama_protocol_daily VALUES (%s,%s,%s,%s,%s) ON CONFLICT (day,protocol,metric) DO UPDATE SET value_usd=EXCLUDED.value_usd, category=EXCLUDED.category", per)
             # keep legacy chain_tvl in sync for the existing share widget
             cur.executemany("INSERT INTO chain_tvl VALUES (%s,%s) ON CONFLICT (day) DO UPDATE SET tvl_usd=EXCLUDED.tvl_usd", [(d, v) for d, v in tvl.items()])
+            # global stablecoin supply (USD-pegged, all chains): the macro driver in the model
+            st = [(D(int(r["date"])), r["totalCirculatingUSD"].get("peggedUSD")) for r in get("https://stablecoins.llama.fi/stablecoincharts/all")]
+            cur.executemany("INSERT INTO stablecoin_supply VALUES (%s,%s) ON CONFLICT (day) DO UPDATE SET supply_usd=EXCLUDED.supply_usd", [x for x in st if x[1]])
         conn.commit()
+        print("stablecoin_supply", conn.execute("SELECT count(*), max(day), max(supply_usd) FROM stablecoin_supply").fetchone())
         print("llama_chain_daily", conn.execute("SELECT count(*), max(day) FROM llama_chain_daily").fetchone(), "protocol rows", len(per))
 
 if __name__ == "__main__":

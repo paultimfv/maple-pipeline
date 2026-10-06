@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from web3 import Web3
 from common import db, w3, tracked_events, BATCH_RPC
 
-CHUNK = {"ethereum": 100_000, "robinhood": 2_000_000}
+CHUNK = {"ethereum": 10_000, "robinhood": 2_000_000}   # Infura now caps eth_getLogs at 10k blocks
 MIN_CHUNK = 2_000
 
 def h(x): return x.hex() if hasattr(x, "hex") else x
@@ -22,7 +22,8 @@ def fetch(ev, conn):
     row = conn.execute("SELECT last_block FROM checkpoint WHERE event_key=%s", (key,)).fetchone()
     frm = row[0] + 1 if row else ev["from_block"]
     chunk, total = CHUNK[chain], 0
-    topics = [hx(ev["topic0"])] + ev.get("extra_topics", [])
+    t0 = ev["topic0"]
+    topics = [[hx(x) for x in t0] if isinstance(t0, list) else hx(t0)] + ev.get("extra_topics", [])
     flt = {"topics": topics}
     addrs = ev["addresses"]
     if addrs == "STOCK_TOKENS":
@@ -35,6 +36,8 @@ def fetch(ev, conn):
         try:
             logs = node.eth.get_logs({**flt, "fromBlock": frm, "toBlock": to})
         except Exception as e:
+            if "429" in str(e) or "Too Many" in str(e):   # rate limit: wait, same chunk
+                time.sleep(3); continue
             if chunk > MIN_CHUNK:
                 chunk //= 2; continue
             print(f"  error at {frm}: {str(e)[:120]}"); time.sleep(5); continue

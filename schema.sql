@@ -234,3 +234,134 @@ CREATE TABLE IF NOT EXISTS bs_holders (day date, token text, address text, holde
 CREATE TABLE IF NOT EXISTS bridge_tvl (day date PRIMARY KEY, block_number bigint, eth_bridged numeric);
 -- stablecoin totalSupply on Robinhood Chain, daily (eth_call)
 CREATE TABLE IF NOT EXISTS rh_stable_supply (day date, token text, kind text, block_number bigint, supply numeric, PRIMARY KEY (day, token));
+
+-- ===================================================================
+-- Maple protocol economics (thesis rebuild, Oct 2026)
+-- ===================================================================
+
+-- every onchain Maple fee that is NOT an open-term ClaimedFundsDistributed (those live in claimed_funds)
+CREATE TABLE IF NOT EXISTS protocol_fees (
+  block_time    timestamptz NOT NULL,
+  block_number  bigint NOT NULL,
+  tx_hash       text NOT NULL,
+  log_index     integer NOT NULL,
+  source        text NOT NULL,      -- ft_mgmt | ft_service | ft_origination | strategy
+  contract      text NOT NULL,      -- emitter (FixedTermLoanManager / MapleLoanFeeManager / strategy)
+  loan          text,
+  decimals      integer NOT NULL,   -- 6 = USDC/USDT (USD), 18 = WETH (excluded from USD sums)
+  platform_fee  numeric NOT NULL,   -- to MapleTreasury
+  delegate_fee  numeric NOT NULL,   -- to the pool delegate
+  PRIMARY KEY (tx_hash, log_index)
+);
+
+-- every contract Maple's factories have deployed; in_registry = false flags anything newer than the registry
+CREATE TABLE IF NOT EXISTS factory_instances (
+  factory      text NOT NULL,
+  instance     text PRIMARY KEY,
+  version      integer,
+  block_time   timestamptz NOT NULL,
+  block_number bigint NOT NULL,
+  tx_hash      text NOT NULL,
+  in_registry  boolean NOT NULL
+);
+
+-- OTC desk revenue: offchain, only ever published by Maple (Dune dataset maple-finance.dataset_dune_monthly_historical,
+-- exported 2026-09). Loaded from config/otc_revenue_monthly.csv. Frozen: Maple stopped publishing it.
+CREATE TABLE IF NOT EXISTS otc_revenue (
+  month       date PRIMARY KEY,
+  amount_usd  numeric NOT NULL
+);
+
+-- Maple revenue by month, every line traceable to a contract event or a sourced offchain file.
+-- onchain = open-term fees (claimed_funds) + fixed-term fees + strategy fees, platform + delegate share
+--           (Maple is the delegate on its own pools; in Sep 2026 it moved the delegate share into the platform fee).
+-- WETH-denominated pools are excluded from USD sums (no ETH price before the trailing year; immaterial).
+-- offchain = OTC desk (Maple-published, to May 2026); from Jul 2026 implied from onchain MIP-021 buybacks.
+CREATE OR REPLACE VIEW monthly_revenue AS
+WITH ot AS (
+  SELECT date_trunc('month', block_time)::date AS month,
+         sum(platform_mgmt_fee + platform_service_fee) AS platform,
+         sum(delegate_mgmt_fee + delegate_service_fee) AS delegate
+  FROM claimed_funds WHERE otlm <> '0xe3aac29001c769fafcef0df072ca396e310ed13b'
+  GROUP BY 1),
+ft AS (
+  SELECT date_trunc('month', block_time)::date AS month,
+         sum(platform_fee + delegate_fee) FILTER (WHERE source <> 'strategy') AS fixed_term,
+         sum(platform_fee) FILTER (WHERE source = 'strategy') AS strategy
+  FROM protocol_fees WHERE decimals = 6
+  GROUP BY 1),
+months AS (SELECT month FROM ot UNION SELECT month FROM ft UNION SELECT month FROM otc_revenue),
+base AS (
+  SELECT m.month,
+         coalesce(ot.platform, 0)   AS open_term_platform,
+         coalesce(ot.delegate, 0)   AS open_term_delegate,
+         coalesce(ft.fixed_term, 0) AS fixed_term,
+         coalesce(ft.strategy, 0)   AS strategy,
+         coalesce(ot.platform, 0) + coalesce(ot.delegate, 0) + coalesce(ft.fixed_term, 0) + coalesce(ft.strategy, 0) AS onchain_revenue,
+         o.amount_usd AS otc_published,
+         b.amount_usd AS buyback_usd
+  FROM months m LEFT JOIN ot USING (month) LEFT JOIN ft USING (month)
+  LEFT JOIN otc_revenue o USING (month) LEFT JOIN syrup_buybacks b USING (month)),
+rep AS (   -- MIP-021 (revenue from Jul 2026): solve buyback = tier(R) * R for Maple-reported revenue R
+  SELECT month, CASE WHEN month < '2026-07-01' OR buyback_usd IS NULL THEN NULL
+                     WHEN buyback_usd / 0.10 < 1500000 THEN buyback_usd / 0.10
+                     WHEN buyback_usd / 0.20 < 2000000 THEN buyback_usd / 0.20
+                     ELSE buyback_usd / 0.30 END AS maple_reported_revenue
+  FROM base)
+SELECT b.*, r.maple_reported_revenue,
+       CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END AS offchain_implied,
+       coalesce(b.otc_published, CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, 0) AS offchain_revenue,
+       b.onchain_revenue + coalesce(b.otc_published, CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, 0) AS total_revenue,
+       (b.otc_published IS NULL AND r.maple_reported_revenue IS NULL AND b.month BETWEEN '2026-06-01' AND date_trunc('month', now())) AS offchain_unknown
+FROM base b JOIN rep r USING (month)
+ORDER BY month;
+
+-- SYRUP totalSupply and the amount held by Maple-controlled wallets (common.SYRUP_NONCIRC)
+CREATE TABLE IF NOT EXISTS syrup_supply (
+  day           date PRIMARY KEY,
+  block_number  bigint NOT NULL,
+  total_supply  numeric NOT NULL,
+  maple_held    numeric NOT NULL     -- circulating = total_supply - maple_held
+);
+
+-- Maple AUM at each month-end, USD pools only (WETH pools are denominated in ETH; excluded)
+CREATE OR REPLACE VIEW aum_monthly AS
+SELECT day AS month_end, pool, total_assets AS aum_usd
+FROM pool_state
+WHERE (day + 1) = date_trunc('month', day + 1)::date
+  AND pool NOT IN ('High Yield Corporate Loan WETH', 'Maven11 WETH')
+  AND total_assets > 1000;
+
+-- one row per month: revenue, trailing-12m revenue, AUM, market cap, P/S, buyback tier
+CREATE OR REPLACE VIEW monthly_model AS
+WITH a AS (SELECT date_trunc('month', month_end)::date AS month, sum(aum_usd) AS aum_usd FROM aum_monthly GROUP BY 1),
+     p AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, price_usd, mcap_usd
+           FROM syrup_price ORDER BY date_trunc('month', day), day DESC),
+     r AS (SELECT month, onchain_revenue, offchain_revenue, total_revenue, buyback_usd, maple_reported_revenue, offchain_unknown,
+                  sum(total_revenue) OVER (ORDER BY month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS ttm_revenue,
+                  count(*) OVER (ORDER BY month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS ttm_months
+           FROM monthly_revenue)
+SELECT r.month, r.onchain_revenue, r.offchain_revenue, r.total_revenue, r.offchain_unknown,
+       CASE WHEN ttm_months = 12 THEN r.ttm_revenue END AS ttm_revenue,
+       a.aum_usd, r.total_revenue * 12 / NULLIF(a.aum_usd, 0) AS revenue_yield_on_aum,
+       p.price_usd, p.mcap_usd,
+       CASE WHEN ttm_months = 12 THEN p.mcap_usd / NULLIF(r.ttm_revenue, 0) END AS ps_ttm,
+       r.buyback_usd, r.maple_reported_revenue,
+       CASE WHEN r.total_revenue >= 2000000 THEN 0.30 WHEN r.total_revenue >= 1500000 THEN 0.20 ELSE 0.10 END AS mip021_tier
+FROM r LEFT JOIN a USING (month) LEFT JOIN p USING (month)
+ORDER BY r.month;
+
+-- the model's history columns: one row per calendar year
+CREATE OR REPLACE VIEW annual_model_inputs AS
+SELECT extract(year FROM month)::int AS year,
+       count(*) AS months,
+       sum(onchain_revenue) AS onchain_revenue, sum(offchain_revenue) AS offchain_revenue, sum(total_revenue) AS total_revenue,
+       (array_agg(aum_usd ORDER BY month DESC) FILTER (WHERE aum_usd IS NOT NULL))[1] AS aum_year_end,
+       (array_agg(mcap_usd ORDER BY month DESC) FILTER (WHERE mcap_usd IS NOT NULL))[1] AS mcap_year_end,
+       (array_agg(price_usd ORDER BY month DESC) FILTER (WHERE price_usd IS NOT NULL))[1] AS price_year_end,
+       sum(buyback_usd) AS buybacks
+FROM monthly_model
+GROUP BY 1 ORDER BY 1;
+
+-- global USD stablecoin supply, all chains (DeFiLlama; macro context, cited)
+CREATE TABLE IF NOT EXISTS stablecoin_supply (day date PRIMARY KEY, supply_usd numeric NOT NULL);

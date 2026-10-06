@@ -1,0 +1,2 @@
+unique_borrowers,loans,pools,total_originated_usd,avg_loan_usd,median_loan_usd,largest_loan_usd,principal_repaid_usd,gross_interest_usd,platform_revenue_usd,first_loan,last_loan
+136,514,15,8616389033.68072,16763402.7892621,5465833.333333008,500000000,11494726441.710716,149297593.96186888,12527638.89776605,2022-01-18,2026-09-10

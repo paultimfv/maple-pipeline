@@ -63,9 +63,34 @@ RH_COLLATERAL_SYMBOLS = {
 
 ZERO = "0x0000000000000000000000000000000000000000"
 
+SYRUP_TOKEN      = "0x643c4e15d7d62ad0abec4a9bd4b001aa3ef52d66"
+MAPLE_TREASURY   = "0xa9466eabd096449d650d5aeb0dd3da6f52fd0b19"   # globals.mapleTreasury()
+DAO_MULTISIG     = "0xd6d4bcde6c816f17889f1dd3000af0261b03a196"
+FEE_MANAGER      = "0xfeaca6a5703e6f9de0ebe0975c93ae34c00523f2"
+# SYRUP held by Maple-controlled wallets = not circulating (circulating = totalSupply - these)
+SYRUP_NONCIRC = {
+    "daoMultisig": DAO_MULTISIG,
+}   # MapleLoanFeeManager (fixed-term service/origination fees)
+FACTORIES = {
+    "openTermLoanManager":  "0x90b14505221a24039a2d11ad5862339db97cc160",
+    "fixedTermLoanManager": "0x1551717ae4fdcb65ed028f7fb7aba39908f6a7a6",
+    "poolManager":          "0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339",
+    "skyStrategy":          "0x27327e08de810c687687f95bfce92088089b56db",
+    "aaveStrategy":         "0x01ab799f77f9a9f4dd0d2b6e7c83dcf3f48d5650",
+    "basicStrategy":        "0x876d54dbf61473ca169b89b95344a14e81f37afe",
+}
+
+def by_type(*types):
+    return [a for a, r in load_contracts().items() if r["contract_type"] in types]
+
 def otlm_addresses():
     """All OpenTermLoanManager proxies from the registry (13 on mainnet)."""
-    return [a for a, r in load_contracts().items() if r["contract_type"] == "OpenTermLoanManager"]
+    return by_type("OpenTermLoanManager")
+
+def pools():
+    """MaplePool proxies -> (name, pool_group, decimals)."""
+    return {a: (r["official_name"] or r["pool_group"], r["pool_group"], int(r["decimals"] or 6))
+            for a, r in load_contracts().items() if r["contract_type"] == "MaplePool"}
 
 # --- tracked events (dashboard scope) -----------------------------------
 def tracked_events():
@@ -109,6 +134,18 @@ def tracked_events():
         {"key": "eth.OTLM.ClaimedFundsDistributed", "chain": "ethereum",
          "topic0": t("ClaimedFundsDistributed(address,uint256,uint256,uint256,uint256,uint256,uint256)"),
          "addresses": otlms, "from_block": 17_000_000},
+        # every other fee Maple earns onchain, in one sweep (topic0 is OR-ed):
+        # fixed-term management fees, fixed-term service + origination fees, strategy fees,
+        # and factory deployments (audit: any loan manager or strategy not in the registry)
+        {"key": "eth.Maple.Fees", "chain": "ethereum",
+         "topic0": [t("ManagementFeesPaid(address,uint256,uint256)"),
+                    t("ServiceFeesPaid(address,uint256,uint256,uint256,uint256)"),
+                    t("OriginationFeesPaid(address,uint256,uint256)"),
+                    t("StrategyFeesCollected(uint256)"),
+                    t("InstanceDeployed(uint256,address,bytes)")],
+         "addresses": by_type("FixedTermLoanManager", "MapleSkyStrategy", "MapleAaveStrategy")
+                      + [FEE_MANAGER] + list(FACTORIES.values()),
+         "from_block": 16_000_000},
         {"key": "eth.OTLM.PrincipalOutUpdated", "chain": "ethereum", "topic0": t("PrincipalOutUpdated(uint128)"),
          "addresses": [SYRUPUSDG_OTLM], "from_block": 22_500_000},
         # loan Initialized has no fixed emitter (each loan is its own contract) -> filter by indexed lender_ = OTLM
