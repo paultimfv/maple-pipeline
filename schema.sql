@@ -290,7 +290,7 @@ ft AS (
          sum(platform_fee) FILTER (WHERE source = 'strategy') AS strategy
   FROM protocol_fees WHERE decimals = 6
   GROUP BY 1),
-months AS (SELECT month FROM ot UNION SELECT month FROM ft UNION SELECT month FROM otc_revenue),
+months AS (SELECT month FROM ot UNION SELECT month FROM ft UNION SELECT month FROM otc_revenue UNION SELECT month FROM maple_reported_revenue),
 base AS (
   SELECT m.month,
          coalesce(ot.platform, 0)   AS open_term_platform,
@@ -299,20 +299,25 @@ base AS (
          coalesce(ft.strategy, 0)   AS strategy,
          coalesce(ot.platform, 0) + coalesce(ot.delegate, 0) + coalesce(ft.fixed_term, 0) + coalesce(ft.strategy, 0) AS onchain_revenue,
          o.amount_usd AS otc_published,
-         b.amount_usd AS buyback_usd
+         b.amount_usd AS buyback_usd,
+         r.revenue_usd AS reported
   FROM months m LEFT JOIN ot USING (month) LEFT JOIN ft USING (month)
-  LEFT JOIN otc_revenue o USING (month) LEFT JOIN syrup_buybacks b USING (month)),
-rep AS (   -- MIP-021 (revenue from Jul 2026): solve buyback = tier(R) * R for Maple-reported revenue R
-  SELECT month, CASE WHEN month < '2026-07-01' OR buyback_usd IS NULL THEN NULL
-                     WHEN buyback_usd / 0.10 < 1500000 THEN buyback_usd / 0.10
-                     WHEN buyback_usd / 0.20 < 2000000 THEN buyback_usd / 0.20
-                     ELSE buyback_usd / 0.30 END AS maple_reported_revenue
+  LEFT JOIN otc_revenue o USING (month) LEFT JOIN syrup_buybacks b USING (month)
+  LEFT JOIN maple_reported_revenue r USING (month)),
+rep AS (   -- Maple-reported revenue: transparency page; fallback = MIP-021 buyback / tier (from Jul 2026)
+  SELECT month, coalesce(reported,
+           CASE WHEN month < '2026-07-01' OR buyback_usd IS NULL THEN NULL
+                WHEN buyback_usd / 0.10 < 1500000 THEN buyback_usd / 0.10
+                WHEN buyback_usd / 0.20 < 2000000 THEN buyback_usd / 0.20
+                ELSE buyback_usd / 0.30 END) AS maple_reported_revenue
   FROM base)
-SELECT b.*, r.maple_reported_revenue,
+-- offchain (OTC desk + anything else Maple earns offchain) = Maple-reported revenue - our onchain fees
+SELECT b.month, b.open_term_platform, b.open_term_delegate, b.fixed_term, b.strategy, b.onchain_revenue,
+       b.otc_published, b.buyback_usd, r.maple_reported_revenue,
        CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END AS offchain_implied,
-       coalesce(b.otc_published, CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, 0) AS offchain_revenue,
-       b.onchain_revenue + coalesce(b.otc_published, CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, 0) AS total_revenue,
-       (b.otc_published IS NULL AND r.maple_reported_revenue IS NULL AND b.month BETWEEN '2026-06-01' AND date_trunc('month', now())) AS offchain_unknown
+       coalesce(CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, b.otc_published, 0) AS offchain_revenue,
+       b.onchain_revenue + coalesce(CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, b.otc_published, 0) AS total_revenue,
+       (b.otc_published IS NULL AND r.maple_reported_revenue IS NULL AND b.month >= '2026-06-01') AS offchain_unknown
 FROM base b JOIN rep r USING (month)
 ORDER BY month;
 
@@ -426,3 +431,16 @@ FROM dune.pool_aum_vs_deposits_over_time_protocol_totals
 WHERE date::date < coalesce((SELECT min(day) FROM maple_pool_state), '2999-01-01')
 UNION ALL
 SELECT day, sum(tvl_usd - collateral_usd), sum(collateral_usd), sum(tvl_usd), 'maple api' FROM maple_pool_state GROUP BY day;
+
+-- ===== Maple-reported (maple.finance/transparency; see pipeline/fetch_maple_site.py) =====
+CREATE TABLE IF NOT EXISTS maple_reported_revenue (month date PRIMARY KEY, revenue_usd numeric NOT NULL);
+CREATE TABLE IF NOT EXISTS maple_reported_aum (
+  day date NOT NULL, product text NOT NULL, aum_usd numeric NOT NULL, deposits_usd numeric NOT NULL, PRIMARY KEY (day, product));
+CREATE TABLE IF NOT EXISTS ssf_daily (day date PRIMARY KEY, syrup_held numeric NOT NULL, liquid_assets_usd numeric NOT NULL);
+CREATE TABLE IF NOT EXISTS maple_balance_sheet (
+  day date PRIMARY KEY, syrup_amount numeric NOT NULL, syrup_usd numeric NOT NULL, liquid_assets_usd numeric NOT NULL);
+
+-- AUM = deposits + collateral, daily since 2023 (Maple-reported; collateral is at custodians, not onchain)
+CREATE OR REPLACE VIEW aum_reported AS
+SELECT day, sum(deposits_usd) AS deposits_usd, sum(aum_usd - deposits_usd) AS collateral_usd, sum(aum_usd) AS aum_usd, 'maple site' AS source
+FROM maple_reported_aum GROUP BY day;

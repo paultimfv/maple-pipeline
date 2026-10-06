@@ -1,6 +1,6 @@
 """Daily job: logs -> block times -> decode -> offchain -> prune -> state -> llama -> syrup -> blockscout -> bridge -> l1 cost. Every step is incremental/idempotent."""
 import datetime as dt, traceback
-import fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, subprocess, sys, os
+import fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_maple_site, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, subprocess, sys, os
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
@@ -20,7 +20,8 @@ if __name__ == "__main__":
         ("offchain", load_offchain.main),
         ("dune_exports", load_dune_exports.main),
         ("borrowers", fetch_borrowers.main),
-        ("maple_api", fetch_maple_api.main),     # Maple-reported TVL incl. custodied collateral (not onchain)     # loan -> borrower via eth_call  # static history from the author's Dune dashboards        # OTC revenue + pre-2025 SYRUP prices (sourced static files)
+        ("maple_api", fetch_maple_api.main),
+        ("maple_site", fetch_maple_site.main),   # Maple-reported revenue, AUM history, SSF, buybacks (transparency page)     # Maple-reported TVL incl. custodied collateral (not onchain)     # loan -> borrower via eth_call  # static history from the author's Dune dashboards        # OTC revenue + pre-2025 SYRUP prices (sourced static files)
         ("decode_earn", lambda: subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "decode_earn_chunked.py")], check=True)),
         ("prune",  lambda: prune(db())),
         ("state",  fetch_state.main),
