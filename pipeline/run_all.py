@@ -4,12 +4,15 @@ import fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
-    """Morpho raw rows are large and already decoded; keep only CreateMarket (Neon free tier = 512 MB)."""
-    n = conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s AND topic0 <> %s",
+    """Morpho raw rows are large and already decoded; keep only CreateMarket (Neon free tier = 512 MB).
+    Also drop Robinhood block times no raw row still needs (decoded tables carry their own block_time)."""
+    # only rows that already have a block time (= were decoded); on a day the blocks step fails, the rest wait for tomorrow
+    timed = "AND EXISTS (SELECT 1 FROM blocks k WHERE k.chain=raw_logs.chain AND k.block_number=raw_logs.block_number)"
+    n = conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s AND topic0 <> %s " + timed,
                      (RH_MORPHO_BLUE, "0xac4b2400f169220b0c0afdde7a0b32e775ba727ea1cb30b35f935cdaab8683ac")).rowcount
-    n += conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s", (RH_EARN_VAULT_V2,)).rowcount
-    n += conn.execute("DELETE FROM raw_logs r USING stock_token_flows s WHERE r.tx_hash=s.tx_hash AND r.log_index=s.log_index").rowcount
-    conn.commit(); print(f"pruned {n} decoded morpho/earn raw rows")
+    n += conn.execute("DELETE FROM raw_logs WHERE chain='robinhood' AND address=%s " + timed, (RH_EARN_VAULT_V2,)).rowcount
+    b = conn.execute("DELETE FROM blocks k WHERE k.chain='robinhood' AND NOT EXISTS (SELECT 1 FROM raw_logs r WHERE r.chain=k.chain AND r.block_number=k.block_number)").rowcount
+    conn.commit(); print(f"pruned {n} decoded morpho/earn raw rows, {b} robinhood block times")
 
 if __name__ == "__main__":
     print(f"=== run_all {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC")

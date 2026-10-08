@@ -111,16 +111,6 @@ def run():
         cur.executemany("INSERT INTO morpho_credit VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
         print("morpho_credit", len(out))
 
-        # Robinhood stock tokens: mints/burns
-        stocks = {r[0] for r in conn.execute("SELECT address FROM rh_tokens WHERE name LIKE '%• Robinhood Token'")}
-        out = []
-        for a, topics, data, bn, tx, li, bt in rows(conn, "robinhood", TOPIC["transfer"]):
-            if a not in stocks: continue
-            f, t = addr(topics[1]), addr(topics[2])
-            if f == ZERO:   out.append((a, bt, bn, tx, li, "mint", data_words(data, 1)[0] / 1e18))
-            elif t == ZERO: out.append((a, bt, bn, tx, li, "burn", data_words(data, 1)[0] / 1e18))
-        cur.executemany("INSERT INTO stock_token_flows VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
-        print("stock_token_flows", len(out))
 
         # ethereum: ClaimedFundsDistributed(address indexed loan_, uint256 x6)
         out = []

@@ -1,7 +1,7 @@
 """Blockscout (robinhoodchain.blockscout.com) -> raw chain activity + token holder counts.
 stats-service needs no key; REST holder counters use BLOCKSCOUT_KEY (free tier, Bearer)."""
 import datetime as dt, os, time, requests
-from common import db, RH_USDG, RH_TOKENS, RH_EARN_VAULT_V2, stock_tokens
+from common import db, RH_USDG, RH_TOKENS, RH_EARN_VAULT_V2
 
 STATS = "https://robinhoodchain.blockscout.com/stats-service/api/v1/lines"
 REST = "https://api.blockscout.com/4663/api/v2"
@@ -41,7 +41,6 @@ def holders(conn):
     """Holder counts today for the tokens the dashboard talks about (one REST call each)."""
     if not KEY: print("  no BLOCKSCOUT_KEY, holders skipped"); return
     toks = {"USDG": RH_USDG, "steakUSDG (Earn)": RH_EARN_VAULT_V2, **RH_TOKENS}
-    toks.update({f"stock:{a}": a for a in stock_tokens()})
     today = dt.datetime.now(dt.timezone.utc).date()
     for name, addr in toks.items():
         try:

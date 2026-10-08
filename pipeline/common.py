@@ -125,11 +125,6 @@ def tracked_events():
          "addresses": [RH_MORPHO_BLUE], "from_block": 1},
         {"key": "rh.Morpho.WithdrawCollateral", "chain": "robinhood", "topic0": t("WithdrawCollateral(bytes32,address,address,address,uint256)"),
          "addresses": [RH_MORPHO_BLUE], "from_block": 1},
-        # Robinhood stock tokens: mints/burns (addresses resolved at runtime from rh_tokens)
-        {"key": "rh.Stock.mint", "chain": "robinhood", "topic0": t("Transfer(address,address,uint256)"),
-         "addresses": "STOCK_TOKENS", "extra_topics": ["0x" + "0"*64], "from_block": 1},
-        {"key": "rh.Stock.burn", "chain": "robinhood", "topic0": t("Transfer(address,address,uint256)"),
-         "addresses": "STOCK_TOKENS", "extra_topics": [None, "0x" + "0"*64], "from_block": 1},
         # ethereum
         {"key": "eth.OTLM.ClaimedFundsDistributed", "chain": "ethereum",
          "topic0": t("ClaimedFundsDistributed(address,uint256,uint256,uint256,uint256,uint256,uint256)"),
