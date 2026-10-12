@@ -1,43 +1,65 @@
 # maple-pipeline
 
-Onchain data pipeline behind the Maple × Robinhood dashboard.
+Onchain data pipeline for Maple Finance on Ethereum and Robinhood Chain. Raw event logs → decoded tables in Postgres (Neon), refreshed daily.
 
-Raw logs from two chains → decoded tables in Neon Postgres → daily refresh.
+Dashboards: https://maple-robinhood.vercel.app, https://robinhood-earn.vercel.app ([maple-dashboard](https://github.com/paultimfv/maple-dashboard))
 
-## How it runs
+## Data
 
-    python pipeline/run_all.py        # logs -> blocks -> decode -> prune -> state -> llama
-    python pipeline/fetch_logs.py rh. # one chain
-    schema.sql                        # tables
+| Data | Source |
+|---|---|
+| Maple pool events: deposits, withdrawals, loans, interest (239 contracts, `config/contracts.csv`) | Ethereum logs (Infura), Robinhood Chain logs (public RPC) |
+| Pool state: `totalAssets`, `totalSupply`, exchange rate | `eth_call` (Alchemy) |
+| Borrower per loan | `loan.borrower()` via `eth_call` |
+| Robinhood Earn vault and Morpho market flows | Robinhood Chain logs |
+| Stablecoin supply on Robinhood Chain | `totalSupply()` per canonical token, daily |
+| ETH in the canonical L1 bridge | Ethereum RPC, bridge contract balance |
+| Sequencer batch cost | SequencerInbox logs + receipts on Ethereum |
+| Chain activity, holder counts | Blockscout |
+| Global stablecoin supply, chain TVL/fees | DeFiLlama |
+| SYRUP price, market cap | CoinGecko |
+| Offchain: OTC revenue, custodied collateral, buybacks | Maple API, maple.finance/transparency, `config/*.csv` |
+| History before the pipeline | Dune exports, `config/dune_exports/` (static) |
 
-Runs daily at 06:15 UTC via `.github/workflows/daily.yml` (secrets: `DATABASE_URL`, `INFURA_URL`, `RPC_URL`).
+## Steps
 
-Two chains: Ethereum (Infura for logs/blocks, Alchemy for `eth_call`) and Robinhood Chain 4663 (public RPC
-for logs; Alchemy `robinhood-mainnet` for batched block lookups). Chain-level TVL/fees come from DeFiLlama
-and are labeled as such on the dashboard.
+`pipeline/run_all.py`, in order. Each step is incremental and idempotent.
 
-## What's indexed
-- syrupUSDG pool (Ethereum + Robinhood Chain): transfers, loans, interest, `totalAssets()` state
-- Robinhood Earn: Steakhouse USDG vault deposits/withdrawals, Morpho Blue market flows and allocation
-- Robinhood stock tokens: mint/burn events; Morpho markets using them as collateral
-- USDG supply on Robinhood Chain (mint/burn only — never full transfer history)
-- SYRUP price (CoinGecko) and buybacks (`config/syrup_buybacks.csv`)
-- Robinhood Chain activity (Blockscout stats-service: txns, accounts, gas fees, smart wallets) and token holder counts (Blockscout REST, `BLOCKSCOUT_KEY`)
-- Stablecoin supply on Robinhood Chain: daily `totalSupply()` of USDG, USDe, syrupUSDG, mGLO, spUSDG (canonical contracts only)
-- Capital on chain: ETH in the canonical L1 bridge (`0xDf87…`, docs.robinhood.com/chain/protocol-contracts) + USDG minted natively; sequencer batch cost from the SequencerInbox on Ethereum
+```
+fetch_logs        raw event logs -> raw_logs
+fetch_blocks      block timestamps (Robinhood: anchors + interpolation)
+decode            raw_logs -> transfers, loans, morpho flows, claims
+load_offchain     config CSVs
+load_dune_exports config/dune_exports -> schema dune
+fetch_borrowers   loan -> borrower
+fetch_maple_api   Maple GraphQL -> maple_pool_state
+fetch_maple_site  transparency page -> reported revenue, AUM, buybacks
+decode_earn       Earn vault logs (chunked)
+prune             drop decoded raw rows (Neon 512 MB limit)
+fetch_state       pool state via eth_call
+fetch_llama       DeFiLlama
+fetch_syrup       CoinGecko + buybacks
+fetch_blockscout  chain activity, holders
+fetch_bridge      L1 bridge ETH
+fetch_stables     Robinhood Chain stablecoin supply
+fetch_l1_cost     sequencer batch cost
+```
+
+## Run
+
+```
+pip install -r requirements.txt
+cp .env.example .env
+psql $DATABASE_URL -f schema.sql
+python pipeline/run_all.py
+```
+
+Env: `DATABASE_URL`, `INFURA_URL`, `RPC_URL` (Alchemy), `RH_RPC_URL`, `BLOCKSCOUT_KEY`.
+Daily at 06:15 UTC via `.github/workflows/daily.yml`.
 
 ## RPC notes
-- Alchemy free tier: `eth_getLogs` capped at 10-block range and throttles (429) on burst. Use for `eth_call` only.
-- Infura free tier: no range cap — use for Ethereum logs and blocks. Rate-limit errors come back *inside* HTTP-200 batch responses; check every item has `result`.
-- Robinhood Chain: public RPC handles 2M-block `getLogs` chunks; keep Alchemy block lookups ≤2 threads.
-- Robinhood block timestamps: exact for syrup transfers/markets, anchor + interpolation for the ~290k Morpho blocks (daily buckets only).
-- Neon drops idle connections during long fetches: fresh connection per insert, `COPY` not `executemany`. Raw rows are pruned after decode to stay under the 512 MB free tier.
 
-## Setup
-    pip install -r requirements.txt
-    cp .env.example .env      # RPC_URL (Alchemy), INFURA_URL, DATABASE_URL, BLOCKSCOUT_KEY
-
-## Layout
-    config/       contract map (contracts.csv), ABI + event bundle (abis.json), buybacks csv
-    pipeline/     fetch_logs.py · fetch_blocks.py · decode.py · fetch_state.py · fetch_llama.py · fetch_syrup.py · fetch_blockscout.py · fetch_bridge.py · fetch_stables.py · fetch_l1_cost.py · run_all.py
-    pipeline/experimental/  parked block sampler
+- Alchemy free tier caps `eth_getLogs` at 10 blocks; used for `eth_call` only.
+- Infura free tier returns rate-limit errors inside HTTP 200 batch responses; every item is checked for `result`.
+- Robinhood Chain public RPC handles 2M-block `getLogs` ranges.
+- Neon drops idle connections during long fetches: fresh connection per insert, `COPY` for bulk writes.
