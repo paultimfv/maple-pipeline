@@ -2,7 +2,7 @@
 
 Onchain data pipeline for Maple Finance on Ethereum and Robinhood Chain. Raw event logs → decoded tables in Postgres (Neon), refreshed daily.
 
-Dashboards: https://maple-robinhood.vercel.app, https://robinhood-earn.vercel.app ([maple-dashboard](https://github.com/paultimfv/maple-dashboard))
+Used by: [maple-dashboard](https://github.com/paultimfv/maple-dashboard), [robinhood-earn](https://github.com/paultimfv/robinhood-earn), [maple-model](https://github.com/paultimfv/maple-model)
 
 ## Data
 
