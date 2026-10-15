@@ -10,6 +10,7 @@ INBOX = "0xBd0D173EEb87D57A09521c24388a12789F33ba96"
 TOPIC = "0x" + Web3.keccak(text="SequencerBatchDelivered(uint256,bytes32,bytes32,bytes32,uint256,(uint64,uint64,uint64,uint64),uint8)").hex()
 eth = Web3(Web3.HTTPProvider(RPC["ethereum"], request_kwargs={"timeout": 60}))
 URL = BATCH_RPC["ethereum"]
+BUDGET = 15 * 60   # seconds per run
 
 def batch(calls):
     delay = 1
@@ -26,12 +27,17 @@ def main():
     with db() as conn:
         row = conn.execute("SELECT last_block FROM checkpoint WHERE event_key='eth.RH.SequencerBatch'").fetchone()
     frm = row[0] + 1 if row else 22_400_000   # ~Apr 2026
-    head = eth.eth.block_number; chunk = 50_000
+    head = eth.eth.block_number; chunk = 10_000; fails = 0
+    deadline = time.time() + BUDGET   # catch-up is slow on free RPC: stop after the budget, resume tomorrow
     if True:
-        while frm <= head:
+        while frm <= head and time.time() < deadline:
             to = min(frm + chunk - 1, head)
             try: logs = eth.eth.get_logs({"address": INBOX, "topics": [TOPIC], "fromBlock": frm, "toBlock": to})
-            except Exception: chunk = max(chunk // 2, 2000); continue
+            except Exception:
+                fails += 1
+                if fails > 8: raise
+                chunk = max(chunk // 2, 2000); time.sleep(min(2 ** fails, 30)); continue
+            fails = 0
             hashes = sorted({"0x" + l["transactionHash"].hex() if not l["transactionHash"].hex().startswith("0x") else l["transactionHash"].hex() for l in logs})
             rows = []
             for i in range(0, len(hashes), 10):
@@ -50,7 +56,7 @@ def main():
                 conn.execute("INSERT INTO checkpoint VALUES ('eth.RH.SequencerBatch',%s) ON CONFLICT (event_key) DO UPDATE SET last_block=EXCLUDED.last_block", (to,))
                 conn.commit()
             print(f"  {to:,} +{len(rows)} batches", end="\r"); frm = to + 1
-        print()
+        print(f"\n  checkpoint {frm - 1:,} / head {head:,}")
         with db() as conn: print(conn.execute("SELECT count(*), min(block_time)::date, max(block_time)::date, sum(fee_eth) FROM rh_l1_batches").fetchone())
 
 if __name__ == "__main__":
