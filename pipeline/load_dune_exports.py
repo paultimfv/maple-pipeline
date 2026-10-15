@@ -1,5 +1,5 @@
 """
-Load every Dune CSV export in config/dune_exports/ into Postgres schema `dune` (one table per file, replaced on each run).
+Load every Dune CSV export in config/dune_exports/ into Postgres schema `dune` (one table per file, loaded once; drop a table to reload it).
 These are the author's own Maple dashboards on Dune (ptmfv / ptimfv_team), exported Sep 2026, before the Dune account
 ran out of credits. Static history; the live pipeline tables are the source of truth from here on.
 """
@@ -25,6 +25,7 @@ def main():
             name = table_name(f)
             if name in seen: continue            # duplicate exports ("(1)" copies)
             seen.add(name)
+            if conn.execute("SELECT to_regclass(%s)", (f'dune."{name}"',)).fetchone()[0]: continue   # static; load once
             cols = [re.sub(r"[^a-z0-9_]", "_", c.strip().lower()) or f"c{i}" for i, c in enumerate(rows[0])]
             body = rows[1:]
             types = ["numeric" if all(NUM.match(r[i]) for r in body if i < len(r) and r[i] != "") and any(i < len(r) and r[i] for r in body) else "text"
