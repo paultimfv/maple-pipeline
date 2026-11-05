@@ -1,4 +1,4 @@
-"""Daily job: logs -> block times -> decode -> offchain -> prune -> state -> llama -> syrup -> blockscout -> bridge -> l1 cost. Every step is incremental/idempotent."""
+"""Daily job: quick API steps (Maple, llama, syrup, offchain) first, then logs -> block times -> decode -> prune -> state -> blockscout -> bridge -> stables -> l1 cost. Every step is incremental/idempotent."""
 import datetime as dt, traceback
 import fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_maple_site, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, subprocess, sys, os
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
@@ -17,24 +17,27 @@ def prune(conn):
 if __name__ == "__main__":
     print(f"=== run_all {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC")
     steps = [
+        # quick API steps first: they only touch their own tables, so a slow chain backfill can't starve them (runs time out at 60 min)
+        ("maple_api", fetch_maple_api.main),     # Maple-reported TVL incl. custodied collateral (not onchain)
+        ("maple_site", fetch_maple_site.main),   # Maple-reported revenue, AUM history, SSF, buybacks (transparency pages)
+        ("llama",  fetch_llama.main),
+        ("syrup",  fetch_syrup.main),
+        ("offchain", load_offchain.main),        # OTC revenue + pre-2025 SYRUP prices (sourced static files)
+        ("dune_exports", load_dune_exports.main),
+        # chain backfill
         ("logs",   lambda: [fetch_logs.fetch(ev, conn) for conn in [db()] for ev in fetch_logs.tracked_events()]),
         ("blocks", fetch_blocks.main),
         ("decode", decode.run),
-        ("offchain", load_offchain.main),
-        ("dune_exports", load_dune_exports.main),
-        ("borrowers", fetch_borrowers.main),
-        ("maple_api", fetch_maple_api.main),
-        ("maple_site", fetch_maple_site.main),   # Maple-reported revenue, AUM history, SSF, buybacks (transparency page)     # Maple-reported TVL incl. custodied collateral (not onchain)     # loan -> borrower via eth_call  # static history from the author's Dune dashboards        # OTC revenue + pre-2025 SYRUP prices (sourced static files)
+        ("borrowers", fetch_borrowers.main),     # loan -> borrower via eth_call
         ("decode_earn", lambda: subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "decode_earn_chunked.py")], check=True)),
         ("prune",  lambda: prune(db())),
         ("state",  fetch_state.main),
-        ("llama",  fetch_llama.main),
-        ("syrup",  fetch_syrup.main),
         ("blockscout", fetch_blockscout.main),   # raw chain activity + holder counts
         ("bridge", fetch_bridge.main),           # ETH in the canonical L1 bridge
         ("stables", fetch_stables.main),         # stablecoin totalSupply on RH Chain
         ("l1_cost", fetch_l1_cost.main),         # sequencer batch cost on Ethereum
     ]
     for name, fn in steps:
-        try: fn(); print(f"--- {name} ok")
+        t0 = dt.datetime.now()
+        try: fn(); print(f"--- {name} ok ({(dt.datetime.now() - t0).seconds}s)")
         except Exception: print(f"--- {name} FAILED"); traceback.print_exc()
