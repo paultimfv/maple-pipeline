@@ -1,6 +1,6 @@
 """Daily job: quick API steps (Maple, llama, syrup, offchain) first, then logs -> block times -> decode -> prune -> state -> blockscout -> bridge -> stables -> l1 cost. Every step is incremental/idempotent."""
 import datetime as dt, traceback
-import fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_maple_site, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, subprocess, sys, os
+import fetch_loans, fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_maple_site, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, subprocess, sys, os
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
@@ -32,6 +32,7 @@ if __name__ == "__main__":
         ("decode_earn", lambda: subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "decode_earn_chunked.py")], check=True)),
         ("prune",  lambda: prune(db())),
         ("state",  fetch_state.main),
+        ("loans",  fetch_loans.main),           # principalOut per loan manager at pool_state's blocks (needs state)
         ("blockscout", fetch_blockscout.main),   # raw chain activity + holder counts
         ("bridge", fetch_bridge.main),           # ETH in the canonical L1 bridge
         ("stables", fetch_stables.main),         # stablecoin totalSupply on RH Chain

@@ -281,14 +281,20 @@ CREATE OR REPLACE VIEW monthly_revenue AS
 WITH ot AS (
   SELECT date_trunc('month', block_time)::date AS month,
          sum(platform_mgmt_fee + platform_service_fee) AS platform,
-         sum(delegate_mgmt_fee + delegate_service_fee) AS delegate
-  FROM claimed_funds WHERE otlm <> '0xe3aac29001c769fafcef0df072ca396e310ed13b'
+         sum(delegate_mgmt_fee + delegate_service_fee) AS delegate,
+         sum(platform_mgmt_fee + platform_service_fee + delegate_mgmt_fee + delegate_service_fee)
+           FILTER (WHERE k.pool_group LIKE 'syrup%') AS syrup
+  FROM claimed_funds f LEFT JOIN contracts k ON k.address = lower(f.otlm)
+  WHERE otlm <> '0xe3aac29001c769fafcef0df072ca396e310ed13b'
   GROUP BY 1),
 ft AS (
   SELECT date_trunc('month', block_time)::date AS month,
          sum(platform_fee + delegate_fee) FILTER (WHERE source <> 'strategy') AS fixed_term,
-         sum(platform_fee) FILTER (WHERE source = 'strategy') AS strategy
-  FROM protocol_fees WHERE decimals = 6
+         sum(platform_fee) FILTER (WHERE source = 'strategy') AS strategy,
+         sum(CASE WHEN source = 'strategy' THEN platform_fee ELSE platform_fee + delegate_fee END)
+           FILTER (WHERE k.pool_group LIKE 'syrup%') AS syrup
+  FROM protocol_fees f LEFT JOIN contracts k ON k.address = lower(f.contract)
+  WHERE f.decimals = 6
   GROUP BY 1),
 months AS (SELECT month FROM ot UNION SELECT month FROM ft UNION SELECT month FROM otc_revenue UNION SELECT month FROM maple_reported_revenue),
 base AS (
@@ -298,6 +304,7 @@ base AS (
          coalesce(ft.fixed_term, 0) AS fixed_term,
          coalesce(ft.strategy, 0)   AS strategy,
          coalesce(ot.platform, 0) + coalesce(ot.delegate, 0) + coalesce(ft.fixed_term, 0) + coalesce(ft.strategy, 0) AS onchain_revenue,
+         coalesce(ot.syrup, 0) + coalesce(ft.syrup, 0) AS syrup_revenue,
          o.amount_usd AS otc_published,
          b.amount_usd AS buyback_usd,
          r.revenue_usd AS reported
@@ -308,16 +315,23 @@ rep AS (   -- Maple-reported revenue: transparency page; fallback = MIP-021 buyb
   SELECT month, coalesce(reported,
            CASE WHEN month < '2026-07-01' OR buyback_usd IS NULL THEN NULL
                 WHEN buyback_usd / 0.10 < 1500000 THEN buyback_usd / 0.10
-                WHEN buyback_usd / 0.20 < 2000000 THEN buyback_usd / 0.20
+                WHEN buyback_usd / 0.20 <= 2000000 THEN buyback_usd / 0.20
                 ELSE buyback_usd / 0.30 END) AS maple_reported_revenue
   FROM base)
--- offchain (OTC desk + anything else Maple earns offchain) = Maple-reported revenue - our onchain fees
+-- Total revenue = Maple-reported (it is what Maple publishes and what MIP-021 buybacks are set on).
+-- Revenue split: syrupUSD (syrupUSDC/USDT/USDG loan managers + strategies) + other pools (every other onchain pool) + offchain.
+-- Offchain = Maple-reported - onchain fees. When onchain fees exceed Maple's number (Sep-Oct 2026) offchain can't be
+-- separated: it is NULL ("not separable"), never 0. Before Maple published totals, offchain = its published OTC revenue.
 SELECT b.month, b.open_term_platform, b.open_term_delegate, b.fixed_term, b.strategy, b.onchain_revenue,
        b.otc_published, b.buyback_usd, r.maple_reported_revenue,
        CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END AS offchain_implied,
-       coalesce(CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, b.otc_published, 0) AS offchain_revenue,
-       b.onchain_revenue + coalesce(CASE WHEN r.maple_reported_revenue IS NOT NULL THEN greatest(r.maple_reported_revenue - b.onchain_revenue, 0) END, b.otc_published, 0) AS total_revenue,
-       (b.otc_published IS NULL AND r.maple_reported_revenue IS NULL AND b.month >= '2026-06-01') AS offchain_unknown
+       CASE WHEN r.maple_reported_revenue IS NULL THEN coalesce(b.otc_published, 0)
+            WHEN r.maple_reported_revenue >= b.onchain_revenue THEN r.maple_reported_revenue - b.onchain_revenue END AS offchain_revenue,
+       coalesce(r.maple_reported_revenue, b.onchain_revenue + coalesce(b.otc_published, 0)) AS total_revenue,
+       (b.otc_published IS NULL AND r.maple_reported_revenue IS NULL AND b.month >= '2026-06-01') AS offchain_unknown,
+       b.syrup_revenue,
+       b.onchain_revenue - b.syrup_revenue AS pool_revenue,
+       (r.maple_reported_revenue IS NULL OR r.maple_reported_revenue >= b.onchain_revenue) AS offchain_separable
 FROM base b JOIN rep r USING (month)
 ORDER BY month;
 
@@ -352,7 +366,8 @@ SELECT r.month, r.onchain_revenue, r.offchain_revenue, r.total_revenue, r.offcha
        p.price_usd, p.mcap_usd,
        CASE WHEN ttm_months = 12 THEN p.mcap_usd / NULLIF(r.ttm_revenue, 0) END AS ps_ttm,
        r.buyback_usd, r.maple_reported_revenue,
-       CASE WHEN r.total_revenue >= 2000000 THEN 0.30 WHEN r.total_revenue >= 1500000 THEN 0.20 ELSE 0.10 END AS mip021_tier
+       CASE WHEN r.month < '2025-01-01' THEN 0 WHEN r.month < '2025-07-01' THEN 0.20 WHEN r.month < '2026-07-01' THEN 0.25
+            WHEN r.total_revenue > 2000000 THEN 0.30 WHEN r.total_revenue >= 1500000 THEN 0.20 ELSE 0.10 END AS mip021_tier
 FROM r LEFT JOIN a USING (month) LEFT JOIN p USING (month)
 ORDER BY r.month;
 
@@ -444,3 +459,60 @@ CREATE TABLE IF NOT EXISTS maple_balance_sheet (
 CREATE OR REPLACE VIEW aum_reported AS
 SELECT day, sum(deposits_usd) AS deposits_usd, sum(aum_usd - deposits_usd) AS collateral_usd, sum(aum_usd) AS aum_usd, 'maple site' AS source
 FROM maple_reported_aum GROUP BY day;
+
+-- Contract registry (config/contracts.csv, loaded by fetch_loans.load_registry) so views can map a fee to its pool
+CREATE TABLE IF NOT EXISTS contracts (address text PRIMARY KEY, contract_type text, official_name text, pool_group text, decimals int);
+
+-- Loans outstanding: principalOut() of every USD loan manager, at the blocks pool_state snapshots (fetch_loans.py)
+CREATE TABLE IF NOT EXISTS loan_state (
+  day date NOT NULL, pool text NOT NULL, manager text NOT NULL, kind text NOT NULL,
+  block_number bigint NOT NULL, principal_out_usd numeric NOT NULL, PRIMARY KEY (day, manager));
+
+-- One row per month with every line of the SYRUP model; the dashboard's /api/model export aggregates it to quarters/years.
+-- Flows (revenue, buybacks) are monthly sums; stocks (deposits, loans, AUM, price, supply) are month-end values
+-- (latest available day for the current month).
+CREATE OR REPLACE VIEW model_ledger AS
+WITH m AS (SELECT generate_series('2023-01-01'::date, date_trunc('month', now())::date, '1 month')::date AS month),
+dep AS (   -- Maple-reported deposits and AUM per product, last day of each month
+  SELECT DISTINCT ON (date_trunc('month', day), product) date_trunc('month', day)::date AS month, product, deposits_usd, aum_usd
+  FROM maple_reported_aum ORDER BY date_trunc('month', day), product, day DESC),
+d AS (
+  SELECT month,
+         sum(deposits_usd) AS deposits_total, sum(aum_usd) AS aum_total,
+         sum(deposits_usd) FILTER (WHERE product = 'syrupUSDC') AS deposits_syrupusdc,
+         sum(deposits_usd) FILTER (WHERE product = 'syrupUSDT') AS deposits_syrupusdt,
+         sum(deposits_usd) FILTER (WHERE product = 'syrupUSDG') AS deposits_syrupusdg,
+         sum(deposits_usd) FILTER (WHERE product NOT IN ('syrupUSDC', 'syrupUSDT', 'syrupUSDG')) AS deposits_other
+  FROM dep GROUP BY 1),
+lday AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, day FROM loan_state ORDER BY date_trunc('month', day), day DESC),
+l AS (
+  SELECT lday.month,
+         sum(s.principal_out_usd) AS loans_total,
+         sum(s.principal_out_usd) FILTER (WHERE s.pool = 'syrupUSDC') AS loans_syrupusdc,
+         sum(s.principal_out_usd) FILTER (WHERE s.pool = 'syrupUSDT') AS loans_syrupusdt,
+         sum(s.principal_out_usd) FILTER (WHERE s.pool = 'syrupUSDG') AS loans_syrupusdg,
+         sum(s.principal_out_usd) FILTER (WHERE s.pool NOT IN ('syrupUSDC', 'syrupUSDT', 'syrupUSDG')) AS loans_other
+  FROM lday JOIN loan_state s ON s.day = lday.day GROUP BY 1),
+pa AS (   -- onchain pool assets (USD pools) on the same day as the loan snapshot: the denominator for utilization
+  SELECT lday.month, sum(ps.total_assets) AS pool_assets
+  FROM lday CROSS JOIN (SELECT DISTINCT pool_group FROM contracts WHERE contract_type = 'MaplePool' AND decimals = 6) g
+  JOIN LATERAL (SELECT total_assets FROM pool_state WHERE pool = g.pool_group AND day <= lday.day ORDER BY day DESC LIMIT 1) ps ON true
+  GROUP BY 1),
+sc AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, supply_usd FROM stablecoin_supply ORDER BY date_trunc('month', day), day DESC),
+px AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, price_usd, mcap_usd FROM syrup_price ORDER BY date_trunc('month', day), day DESC),
+ts AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, total_supply FROM syrup_supply ORDER BY date_trunc('month', day), day DESC)
+SELECT m.month,
+       (m.month = date_trunc('month', now())::date) AS partial_month,
+       sc.supply_usd AS stablecoin_supply,
+       d.deposits_total, d.deposits_syrupusdc, d.deposits_syrupusdt, d.deposits_syrupusdg, d.deposits_other,
+       l.loans_total, l.loans_syrupusdc, l.loans_syrupusdt, l.loans_syrupusdg, l.loans_other,
+       l.loans_total / NULLIF(pa.pool_assets, 0) AS utilization, pa.pool_assets,
+       d.aum_total AS aum, d.aum_total - d.deposits_total AS collateral,
+       r.syrup_revenue, r.pool_revenue, r.offchain_revenue, r.offchain_separable, r.onchain_revenue, r.total_revenue,
+       r.maple_reported_revenue,
+       mm.mip021_tier AS buyback_rate, r.total_revenue * mm.mip021_tier AS buybacks_implied, r.buyback_usd AS buybacks_actual,
+       px.price_usd AS syrup_price, px.mcap_usd AS syrup_mcap, ts.total_supply AS syrup_total_supply, px.price_usd * ts.total_supply AS syrup_fdv
+FROM m
+LEFT JOIN d USING (month) LEFT JOIN l USING (month) LEFT JOIN pa USING (month) LEFT JOIN sc USING (month) LEFT JOIN px USING (month) LEFT JOIN ts USING (month)
+LEFT JOIN monthly_revenue r USING (month) LEFT JOIN monthly_model mm USING (month)
+ORDER BY m.month;
