@@ -500,6 +500,12 @@ pa AS (   -- onchain pool assets (USD pools) on the same day as the loan snapsho
   GROUP BY 1),
 sc AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, supply_usd FROM stablecoin_supply ORDER BY date_trunc('month', day), day DESC),
 px AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, price_usd, mcap_usd FROM syrup_price ORDER BY date_trunc('month', day), day DESC),
+gi AS (   -- borrower interest on open-term loans (ClaimedFundsDistributed): to lenders + Maple fees. Fixed-term interest isn't in the events we index.
+  SELECT date_trunc('month', block_time)::date AS month,
+         sum(net_interest + delegate_mgmt_fee + delegate_service_fee + platform_mgmt_fee + platform_service_fee) AS gross_interest,
+         sum(net_interest) AS interest_to_lenders,
+         sum(delegate_mgmt_fee + delegate_service_fee + platform_mgmt_fee + platform_service_fee) AS interest_fees
+  FROM claimed_funds WHERE otlm <> '0xe3aac29001c769fafcef0df072ca396e310ed13b' GROUP BY 1),
 ts AS (SELECT DISTINCT ON (date_trunc('month', day)) date_trunc('month', day)::date AS month, total_supply FROM syrup_supply ORDER BY date_trunc('month', day), day DESC)
 SELECT m.month,
        (m.month = date_trunc('month', now())::date) AS partial_month,
@@ -511,8 +517,13 @@ SELECT m.month,
        r.syrup_revenue, r.pool_revenue, r.offchain_revenue, r.offchain_separable, r.onchain_revenue, r.total_revenue,
        r.maple_reported_revenue,
        mm.mip021_tier AS buyback_rate, r.total_revenue * mm.mip021_tier AS buybacks_implied, r.buyback_usd AS buybacks_actual,
-       px.price_usd AS syrup_price, px.mcap_usd AS syrup_mcap, ts.total_supply AS syrup_total_supply, px.price_usd * ts.total_supply AS syrup_fdv
+       px.price_usd AS syrup_price, px.mcap_usd AS syrup_mcap, ts.total_supply AS syrup_total_supply, px.price_usd * ts.total_supply AS syrup_fdv,
+       gi.gross_interest, gi.interest_to_lenders, gi.interest_fees / NULLIF(gi.gross_interest, 0) AS maple_share_of_interest,
+       r.total_revenue * 12 / NULLIF(pa.pool_assets, 0) AS nim
 FROM m
 LEFT JOIN d USING (month) LEFT JOIN l USING (month) LEFT JOIN pa USING (month) LEFT JOIN sc USING (month) LEFT JOIN px USING (month) LEFT JOIN ts USING (month)
-LEFT JOIN monthly_revenue r USING (month) LEFT JOIN monthly_model mm USING (month)
+LEFT JOIN monthly_revenue r USING (month) LEFT JOIN gi USING (month) LEFT JOIN monthly_model mm USING (month)
 ORDER BY m.month;
+
+-- Maple's "Key financials" box on /transparency/financials, snapshotted daily (fetch_maple_site.kpis)
+CREATE TABLE IF NOT EXISTS maple_kpis (day date PRIMARY KEY, gross_revenue_ttm numeric, protocol_revenue_ttm numeric, nim numeric, treasury_total numeric);

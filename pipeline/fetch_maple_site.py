@@ -56,6 +56,15 @@ def balance_sheet(page):
     liquid = re.search(r"Liquid assets.*?\$([\d.,]+)M", text)
     return float(syrup[1].replace(",", "")) * 1e6, float(syrup[2].replace(",", "")) * 1e6, float(liquid[1].replace(",", "")) * 1e6
 
+def kpis(page):
+    """Key financials box on /transparency/financials (plain HTML): gross revenue TTM, protocol revenue TTM, NIM, treasury total."""
+    text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", page))
+    def usd(label):
+        m = re.search(re.escape(label) + r".{0,400}?\$([\d.,]+)([MBK])", text)
+        return float(m[1].replace(",", "")) * {"K": 1e3, "M": 1e6, "B": 1e9}[m[2]] if m else None
+    nim = re.search(r"Net interest margin.{0,300}?([\d.]+)%", text)
+    return usd("Gross revenue · last 12 months"), usd("Protocol revenue · last 12 months"), float(nim[1]) / 100 if nim else None, usd("Treasury total")
+
 def main():
     # Since the Nov 2026 redesign the data is split: AUM/deposits on /transparency, revenue + SSF + balance sheet
     # on /transparency/financials, buybacks on /transparency/syrup.
@@ -72,6 +81,10 @@ def main():
         bs = balance_sheet(fin)
     except Exception as e:
         bs = None; print(f"maple site: balance sheet not parsed ({e!r}), skipping it")
+    try:
+        kp = kpis(fin)
+    except Exception as e:
+        kp = None; print(f"maple site: key financials not parsed ({e!r}), skipping them")
     today = dt.datetime.now(dt.timezone.utc).date()
     with db() as conn:
         cur = conn.cursor()
@@ -86,8 +99,13 @@ def main():
             cur.execute("""INSERT INTO maple_balance_sheet VALUES (%s,%s,%s,%s) ON CONFLICT (day) DO UPDATE SET
                            syrup_amount=EXCLUDED.syrup_amount, syrup_usd=EXCLUDED.syrup_usd, liquid_assets_usd=EXCLUDED.liquid_assets_usd""",
                         (today, *bs))
+        if kp and any(v is not None for v in kp):
+            conn.execute("""CREATE TABLE IF NOT EXISTS maple_kpis (day date PRIMARY KEY, gross_revenue_ttm numeric,
+                            protocol_revenue_ttm numeric, nim numeric, treasury_total numeric)""")
+            conn.execute("""INSERT INTO maple_kpis VALUES (%s,%s,%s,%s,%s) ON CONFLICT (day) DO UPDATE SET gross_revenue_ttm=EXCLUDED.gross_revenue_ttm,
+                            protocol_revenue_ttm=EXCLUDED.protocol_revenue_ttm, nim=EXCLUDED.nim, treasury_total=EXCLUDED.treasury_total""", (today, *kp))
         conn.commit()
-    print(f"maple site: revenue {len(rev)} months · aum {len(aum)} days · ssf {len(ssf)} days · buybacks {len(bb)} months")
+    print(f"maple site: key financials {kp} · revenue {len(rev)} months · aum {len(aum)} days · ssf {len(ssf)} days · buybacks {len(bb)} months")
 
 if __name__ == "__main__":
     main()
