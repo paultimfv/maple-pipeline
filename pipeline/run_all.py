@@ -36,7 +36,8 @@ if __name__ == "__main__":
         ("blockscout", fetch_blockscout.main),   # raw chain activity + holder counts
         ("bridge", fetch_bridge.main),           # ETH in the canonical L1 bridge
         ("stables", fetch_stables.main),         # stablecoin totalSupply on RH Chain
-        ("l1_cost", fetch_l1_cost.main),         # sequencer batch cost on Ethereum
+        # sequencer batch cost on Ethereum: slow-moving and heavy on the free RPC, so once a day (06 UTC run) is enough
+        ("l1_cost", fetch_l1_cost.main if dt.datetime.now(dt.timezone.utc).hour == 6 or os.environ.get("L1_COST") else lambda: print("l1_cost: daily step, skipped this hour")),
     ]
     for name, fn in steps:
         t0 = dt.datetime.now()
