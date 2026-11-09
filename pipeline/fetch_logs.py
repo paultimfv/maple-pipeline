@@ -4,12 +4,15 @@ Backfill raw event logs (dashboard scope) into Postgres. Resumable per event key
 usage: python pipeline/fetch_logs.py              # all
        python pipeline/fetch_logs.py rh.          # keys containing 'rh.'
 """
-import sys, time, datetime as dt
+import os, sys, time, datetime as dt
 from concurrent.futures import ThreadPoolExecutor
 from web3 import Web3
 from common import db, w3, tracked_events, BATCH_RPC
 
-CHUNK = {"ethereum": 10_000, "robinhood": 2_000_000}   # Infura now caps eth_getLogs at 10k blocks
+CHUNK = {"ethereum": 10_000, "robinhood": 100_000}   # Infura caps eth_getLogs at 10k blocks; Robinhood Chain RPC at 100k (Nov 2026)
+# One run spends at most this long fetching logs, so the steps after it always run (the job is killed at 60 min).
+DEADLINE = time.time() + float(os.environ.get("LOGS_BUDGET_MIN", "20")) * 60
+MAX_ERRORS = 8   # consecutive non-rate-limit errors at the smallest chunk before giving up on this event for this run
 MIN_CHUNK = 2_000
 
 def h(x): return x.hex() if hasattr(x, "hex") else x
@@ -31,7 +34,10 @@ def fetch(ev, conn):
     if addrs:
         flt["address"] = [Web3.to_checksum_address(a) for a in addrs]
     print(f"{key}: blocks {frm:,} -> {head:,}")
+    errors = 0
     while frm <= head:
+        if time.time() > DEADLINE:
+            print(f"\n{key}: time budget used up at block {frm:,}; the next run continues from here"); return
         to = min(frm + chunk - 1, head)
         try:
             logs = node.eth.get_logs({**flt, "fromBlock": frm, "toBlock": to})
@@ -40,7 +46,12 @@ def fetch(ev, conn):
                 time.sleep(3); continue
             if chunk > MIN_CHUNK:
                 chunk //= 2; continue
-            print(f"  error at {frm}: {str(e)[:120]}"); time.sleep(5); continue
+            errors += 1
+            print(f"  error at {frm}: {str(e)[:120]}")
+            if errors >= MAX_ERRORS:
+                print(f"{key}: {errors} errors in a row, skipping it this run"); return
+            time.sleep(5); continue
+        errors = 0
         if logs:
             with conn.cursor() as cur:
                 cur.executemany(
