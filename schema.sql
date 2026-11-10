@@ -540,3 +540,10 @@ CREATE TABLE IF NOT EXISTS token_holders (day date NOT NULL, token text NOT NULL
 -- Maple's open loans, from each loan contract (eth_call), daily snapshot
 CREATE TABLE IF NOT EXISTS loan_book (day date NOT NULL, loan text NOT NULL, pool text NOT NULL, borrower text, asset text NOT NULL,
   principal numeric NOT NULL, rate numeric NOT NULL, date_funded date, PRIMARY KEY (day, loan));
+-- growth drivers, Ethereum onchain: yield-bearing stablecoins and stablecoin lending (supplied/borrowed), weekly
+CREATE TABLE IF NOT EXISTS macro_onchain (day date NOT NULL, metric text NOT NULL, name text NOT NULL, value_usd numeric NOT NULL);
+CREATE INDEX IF NOT EXISTS macro_onchain_day ON macro_onchain (day);
+-- growth drivers, all chains: largest lending protocols, DefiLlama, weekly
+CREATE TABLE IF NOT EXISTS llama_lending (day date NOT NULL, protocol text NOT NULL, supplied_usd numeric NOT NULL, borrowed_usd numeric NOT NULL, PRIMARY KEY (day, protocol));
+-- growth drivers: CoinGecko 'yield-bearing-stablecoins' category, top 15 by market cap (all chains), daily
+CREATE TABLE IF NOT EXISTS cg_yield_bearing (day date NOT NULL, coin text NOT NULL, symbol text NOT NULL, mcap_usd numeric NOT NULL, PRIMARY KEY (day, coin));
