@@ -28,6 +28,7 @@ TOPIC = {
     "strategy":  T("StrategyFeesCollected(uint256)"),
     "deployed":  T("InstanceDeployed(uint256,address,bytes)"),
     "p_dep":     T("Deposit(address,address,uint256,uint256)"),
+    "p_wd":      T("Withdraw(address,address,address,uint256,uint256)"),
     "r_dep":     T("DepositData(address,uint256,bytes32)"),
 }
 addr = lambda topic: "0x" + topic[-40:]
@@ -165,6 +166,13 @@ def run():
             out.append((bt, bn, tx, li, a, addr(topics[1]), addr(topics[2]), assets / 1e6))
         cur.executemany("INSERT INTO pool_deposits VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
         print("pool_deposits", len(out))
+        out = []
+        for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["p_wd"]):
+            if a not in usd_pools: continue
+            assets, shares = data_words(data, 2)
+            out.append((bt, bn, tx, li, a, addr(topics[3]), assets / 1e6))
+        cur.executemany("INSERT INTO pool_withdrawals VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING", out)
+        print("pool_withdrawals", len(out))
         out = []
         for a, topics, data, bn, tx, li, bt in rows(conn, "ethereum", TOPIC["r_dep"]):
             amount, _ = abi_decode(["uint256", "bytes32"], bytes.fromhex(data[2:]))

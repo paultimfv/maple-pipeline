@@ -152,6 +152,11 @@ def tracked_events():
          "addresses": [a for a, (_, _, dec) in pools().items() if dec == 6],
          "blockscout_pairs": [(a, t("Deposit(address,address,uint256,uint256)")) for a, (_, _, dec) in pools().items() if dec == 6],
          "from_block": 16_000_000},
+        # lenders leaving: ERC-4626 Withdraw(sender idx, receiver idx, owner idx, assets, shares) on every USD pool
+        {"key": "eth.Pool.Withdraw", "chain": "ethereum", "topic0": t("Withdraw(address,address,address,uint256,uint256)"),
+         "addresses": [a for a, (_, _, dec) in pools().items() if dec == 6],
+         "blockscout_pairs": [(a, t("Withdraw(address,address,address,uint256,uint256)")) for a, (_, _, dec) in pools().items() if dec == 6],
+         "from_block": 16_000_000},
         # lenders behind the SyrupRouters (pool Deposit shows the router as owner): DepositData(owner idx, amount, depositData)
         {"key": "eth.Router.DepositData", "chain": "ethereum", "topic0": t("DepositData(address,uint256,bytes32)"),
          "addresses": by_type("SyrupRouter"),

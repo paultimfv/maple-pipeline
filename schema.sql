@@ -527,3 +527,16 @@ ORDER BY m.month;
 
 -- Maple's "Key financials" box on /transparency/financials, snapshotted daily (fetch_maple_site.kpis)
 CREATE TABLE IF NOT EXISTS maple_kpis (day date PRIMARY KEY, gross_revenue_ttm numeric, protocol_revenue_ttm numeric, nim numeric, treasury_total numeric);
+
+-- lenders leaving USD pools (ERC-4626 Withdraw), same scope as pool_deposits
+CREATE TABLE IF NOT EXISTS pool_withdrawals (
+  block_time timestamptz NOT NULL, block_number bigint NOT NULL, tx_hash text NOT NULL, log_index integer NOT NULL,
+  pool text NOT NULL, owner text NOT NULL, assets numeric NOT NULL, PRIMARY KEY (tx_hash, log_index));
+-- SYRUP staked in stSYRUP, daily (eth_call)
+CREATE TABLE IF NOT EXISTS syrup_staked (day date PRIMARY KEY, staked numeric NOT NULL, total_supply numeric NOT NULL);
+-- top holders of SYRUP / syrupUSDC / syrupUSDT, daily snapshot
+CREATE TABLE IF NOT EXISTS token_holders (day date NOT NULL, token text NOT NULL, rank integer NOT NULL, address text NOT NULL,
+  balance numeric NOT NULL, name text, kind text NOT NULL, PRIMARY KEY (day, token, rank));
+-- Maple's open loans, from each loan contract (eth_call), daily snapshot
+CREATE TABLE IF NOT EXISTS loan_book (day date NOT NULL, loan text NOT NULL, pool text NOT NULL, borrower text, asset text NOT NULL,
+  principal numeric NOT NULL, rate numeric NOT NULL, date_funded date, PRIMARY KEY (day, loan));
