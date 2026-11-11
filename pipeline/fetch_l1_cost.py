@@ -12,10 +12,14 @@ eth = Web3(Web3.HTTPProvider(RPC["ethereum"], request_kwargs={"timeout": 60}))
 URL = BATCH_RPC["ethereum"]
 BUDGET = 15 * 60   # seconds per run
 
+class OutOfBudget(Exception): pass
+DEADLINE = time.time() + BUDGET   # reset in main(); batch() honours it so retries can't overrun the budget
+
 def batch(calls):
     delay = 1
     for _ in range(8):
-        try: r = requests.post(URL, json=calls, timeout=90)
+        if time.time() > DEADLINE: raise OutOfBudget()
+        try: r = requests.post(URL, json=calls, timeout=min(90, max(5, DEADLINE - time.time())))
         except requests.RequestException: time.sleep(delay); delay = min(delay*2, 30); continue   # Infura read timeouts
         if r.status_code == 429: time.sleep(delay); delay = min(delay*2, 30); continue
         out = r.json()
@@ -28,8 +32,9 @@ def main():
         row = conn.execute("SELECT last_block FROM checkpoint WHERE event_key='eth.RH.SequencerBatch'").fetchone()
     frm = row[0] + 1 if row else 22_400_000   # ~Apr 2026
     head = eth.eth.block_number; chunk = 10_000; fails = 0
-    deadline = time.time() + BUDGET   # catch-up is slow on free RPC: stop after the budget, resume tomorrow
-    if True:
+    global DEADLINE
+    DEADLINE = deadline = time.time() + BUDGET   # catch-up is slow on free RPC: stop after the budget, resume next run
+    try:
         while frm <= head and time.time() < deadline:
             to = min(frm + chunk - 1, head)
             try: logs = eth.eth.get_logs({"address": INBOX, "topics": [TOPIC], "fromBlock": frm, "toBlock": to})
@@ -56,6 +61,9 @@ def main():
                 conn.execute("INSERT INTO checkpoint VALUES ('eth.RH.SequencerBatch',%s) ON CONFLICT (event_key) DO UPDATE SET last_block=EXCLUDED.last_block", (to,))
                 conn.commit()
             print(f"  {to:,} +{len(rows)} batches", end="\r"); frm = to + 1
+    except OutOfBudget:
+        print(f"\n  budget hit mid-chunk; partial chunk discarded, resumes from {frm:,}")
+    if True:
         print(f"\n  checkpoint {frm - 1:,} / head {head:,}")
         with db() as conn: print(conn.execute("SELECT count(*), min(block_time)::date, max(block_time)::date, sum(fee_eth) FROM rh_l1_batches").fetchone())
 
