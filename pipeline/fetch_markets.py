@@ -59,6 +59,8 @@ def main():
     print(f"syrup_staked {day}: {staked/1e6:,.1f}M of {supply/1e6:,.1f}M")
     for token, (addr, dec) in TOKENS.items():
         r = requests.get(f"{BS}/tokens/{addr}/holders", timeout=60).json()
+        if not isinstance(r, dict) or not r.get("items"):   # Blockscout sometimes answers with an error string
+            print(f"token_holders {token}: skipped (bad response: {str(r)[:80]})"); continue
         rows = []
         for i, h in enumerate(r.get("items", [])[:50]):
             a = h["address"]; ha = a["hash"].lower()
