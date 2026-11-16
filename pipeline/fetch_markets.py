@@ -4,6 +4,10 @@
 - token_holders: the top holders of SYRUP, syrupUSDC and syrupUSDT today, with each address's public name tag
   and a type (staking, treasury, exchange, DEX, lending, bridge, contract, wallet). Holder lists come from the
   Ethereum Blockscout index of the chain (balances are the tokens' own balanceOf); no analytics provider.
+- syrup_venues: where SYRUP trades, one snapshot a day (rewritten each run): spot books from CoinGecko tickers
+  (24h volume, cost to move the price 2% up / down, bid-ask spread), perpetuals from CoinGecko derivatives
+  (open interest, 24h volume, funding rate in % per period as CoinGecko reports it) and DEX pools from
+  GeckoTerminal (liquidity). Binance and Bybit block US servers, so their figures come through CoinGecko.
 """
 import datetime as dt, re, requests
 from common import db, w3
@@ -50,6 +54,32 @@ def kind_of(addr, name, is_contract):
         if re.search(pat, n): return k
     return "contract" if is_contract else "wallet"
 
+UA = {"User-Agent": "maple-pipeline"}
+
+def venues(conn, day):
+    rows = []
+    t = requests.get("https://api.coingecko.com/api/v3/coins/syrup/tickers", params={"depth": "true", "order": "volume_desc"}, headers=UA, timeout=60).json()
+    for x in t.get("tickers", []):
+        if x.get("is_anomaly") or x.get("is_stale") or not x["base"].upper().startswith(("SYRUP", "0X643C")): continue
+        pair = f"SYRUP/{x['target']}" if len(x["target"]) < 12 else "SYRUP/ETH"
+        rows.append((day, x["market"]["name"], pair, "spot", x["converted_volume"]["usd"], x.get("cost_to_move_up_usd"),
+                     x.get("cost_to_move_down_usd"), x.get("bid_ask_spread_percentage"), None, None, None))
+    d = requests.get("https://api.coingecko.com/api/v3/derivatives", headers=UA, timeout=120).json()
+    for x in d:
+        if (x.get("index_id") or "").upper() != "SYRUP" or not x.get("open_interest"): continue
+        rows.append((day, x["market"], x["symbol"], "perp", x.get("volume_24h"), None, None, x.get("spread"),
+                     x["open_interest"], x.get("funding_rate"), None))
+    g = requests.get(f"https://api.geckoterminal.com/api/v2/networks/eth/tokens/{SYRUP}/pools", headers=UA, timeout=60).json()
+    for x in g.get("data", []):
+        a = x["attributes"]; liq = float(a.get("reserve_in_usd") or 0)
+        if liq < 1000: continue
+        rows.append((day, x["relationships"]["dex"]["data"]["id"], a["name"], "pool", float(a["volume_usd"]["h24"] or 0), None, None, None, None, None, liq))
+    keep = {}
+    for r in rows: keep[r[1:4]] = r   # one row per venue/pair/kind
+    conn.execute("DELETE FROM syrup_venues WHERE day=%s", (day,))
+    conn.cursor().executemany("INSERT INTO syrup_venues VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", list(keep.values()))
+    print(f"syrup_venues {day}: {len(keep)} rows")
+
 def main():
     conn = db(); day = dt.datetime.now(dt.timezone.utc).date()
     staked = call(SYRUP, "balanceOf(address)", STSYRUP) / 1e18
@@ -57,6 +87,10 @@ def main():
     conn.execute("""INSERT INTO syrup_staked VALUES (%s,%s,%s) ON CONFLICT (day) DO UPDATE
                     SET staked=EXCLUDED.staked, total_supply=EXCLUDED.total_supply""", (day, staked, supply))
     print(f"syrup_staked {day}: {staked/1e6:,.1f}M of {supply/1e6:,.1f}M")
+    try:
+        venues(conn, day); conn.commit()
+    except Exception as e:
+        conn.rollback(); print(f"syrup_venues skipped: {e}")
     for token, (addr, dec) in TOKENS.items():
         r = requests.get(f"{BS}/tokens/{addr}/holders", timeout=60).json()
         if not isinstance(r, dict) or not r.get("items"):   # Blockscout sometimes answers with an error string

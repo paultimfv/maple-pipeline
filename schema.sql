@@ -547,3 +547,7 @@ CREATE INDEX IF NOT EXISTS macro_onchain_day ON macro_onchain (day);
 CREATE TABLE IF NOT EXISTS llama_lending (day date NOT NULL, protocol text NOT NULL, supplied_usd numeric NOT NULL, borrowed_usd numeric NOT NULL, PRIMARY KEY (day, protocol));
 -- growth drivers: CoinGecko 'yield-bearing-stablecoins' category, top 15 by market cap (all chains), daily
 CREATE TABLE IF NOT EXISTS cg_yield_bearing (day date NOT NULL, coin text NOT NULL, symbol text NOT NULL, mcap_usd numeric NOT NULL, PRIMARY KEY (day, coin));
+-- where SYRUP trades, daily snapshot: spot books (CoinGecko tickers), perps (CoinGecko derivatives), DEX pools (GeckoTerminal)
+CREATE TABLE IF NOT EXISTS syrup_venues (day date NOT NULL, venue text NOT NULL, pair text NOT NULL, kind text NOT NULL,
+  volume_usd numeric, depth_up_usd numeric, depth_down_usd numeric, spread_pct numeric, oi_usd numeric, funding_pct numeric, liquidity_usd numeric,
+  PRIMARY KEY (day, venue, pair, kind));
