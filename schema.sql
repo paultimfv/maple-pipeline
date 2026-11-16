@@ -551,3 +551,10 @@ CREATE TABLE IF NOT EXISTS cg_yield_bearing (day date NOT NULL, coin text NOT NU
 CREATE TABLE IF NOT EXISTS syrup_venues (day date NOT NULL, venue text NOT NULL, pair text NOT NULL, kind text NOT NULL,
   volume_usd numeric, depth_up_usd numeric, depth_down_usd numeric, spread_pct numeric, oi_usd numeric, funding_pct numeric, liquidity_usd numeric,
   PRIMARY KEY (day, venue, pair, kind));
+-- margin calls, from Maple's public API each run (fetch_collateral.py): latest state per loan, a daily snapshot, and events
+CREATE TABLE IF NOT EXISTS loan_collateral (loan text PRIMARY KEY, pool text, asset text, principal_usd numeric, collateral_amount numeric,
+  collateral_usd numeric, level numeric, initial_level numeric, call_level numeric, liq_level numeric, in_call boolean, call_since timestamptz, updated_at timestamptz);
+CREATE TABLE IF NOT EXISTS loan_collateral_daily (day date, loan text, pool text, asset text, principal_usd numeric, collateral_usd numeric,
+  level numeric, call_level numeric, liq_level numeric, in_call boolean, PRIMARY KEY (day, loan));
+CREATE TABLE IF NOT EXISTS margin_events (ts timestamptz, loan text, pool text, asset text, kind text, principal_usd numeric, level numeric,
+  call_level numeric, flag boolean, usd numeric, hours numeric);
