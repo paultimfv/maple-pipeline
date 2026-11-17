@@ -560,3 +560,13 @@ CREATE TABLE IF NOT EXISTS margin_events (ts timestamptz, loan text, pool text, 
   call_level numeric, flag boolean, usd numeric, hours numeric);
 -- SYRUP perp open interest / volume and DEX liquidity history, free public sources (fetch_market_history.py)
 CREATE TABLE IF NOT EXISTS syrup_market_history (day date, source text, metric text, value numeric, PRIMARY KEY (day, source, metric));
+
+-- Maple pool liquidity profile (PoolV2.liquidity), hourly
+CREATE TABLE IF NOT EXISTS pool_liquidity (ts timestamptz, pool text, ord int, category text, name text, detail text, timing text,
+  window_name text, window_order int, loan_count int, amount_usd numeric, cumulative_usd numeric, pct numeric, cumulative_pct numeric,
+  PRIMARY KEY (ts, pool, ord));
+CREATE TABLE IF NOT EXISTS pool_liquidity_interest (ts timestamptz, pool text, window_name text, window_order int, loan_count int,
+  amount_usd numeric, cumulative_usd numeric, PRIMARY KEY (ts, pool, window_order));
+CREATE TABLE IF NOT EXISTS pool_withdrawal_queue (ts timestamptz, pool text, total_assets_usd numeric, pending_usd numeric, as_of timestamptz,
+  processed_12m int, median_minutes numeric, within_24h int, within_3d int, within_7d int, within_14d int,
+  within_24h_pct numeric, within_3d_pct numeric, within_7d_pct numeric, within_14d_pct numeric, PRIMARY KEY (ts, pool));

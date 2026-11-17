@@ -1,6 +1,6 @@
 """Daily job: quick API steps (Maple, llama, syrup, offchain) first, then logs -> block times -> decode -> prune -> state -> blockscout -> bridge -> stables -> l1 cost. Every step is incremental/idempotent."""
 import datetime as dt, traceback
-import fetch_loans, fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_maple_site, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, fetch_markets, fetch_loanbook, fetch_macro, fetch_collateral, fetch_market_history, subprocess, sys, os
+import fetch_loans, fetch_logs, fetch_blocks, decode, load_offchain, load_dune_exports, fetch_borrowers, fetch_maple_api, fetch_maple_site, fetch_state, fetch_llama, fetch_syrup, fetch_blockscout, fetch_bridge, fetch_l1_cost, fetch_stables, fetch_markets, fetch_loanbook, fetch_macro, fetch_collateral, fetch_market_history, fetch_liquidity, subprocess, sys, os
 from common import db, RH_MORPHO_BLUE, RH_EARN_VAULT_V2
 
 def prune(conn):
@@ -20,6 +20,7 @@ if __name__ == "__main__":
         # quick API steps first: they only touch their own tables, so a slow chain backfill can't starve them (runs time out at 60 min)
         ("maple_api", fetch_maple_api.main),     # Maple-reported TVL incl. custodied collateral (not onchain)
         ("collateral", fetch_collateral.main),   # margin calls: each loan's collateral ÷ principal vs its call level (Maple API)
+        ("liquidity", fetch_liquidity.main),     # how much of each syrup pool can come back, by time window (Maple API)
         ("maple_site", fetch_maple_site.main),   # Maple-reported revenue, AUM history, SSF, buybacks (transparency pages)
         ("llama",  fetch_llama.main),
         ("syrup",  fetch_syrup.main),
