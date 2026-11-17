@@ -558,3 +558,5 @@ CREATE TABLE IF NOT EXISTS loan_collateral_daily (day date, loan text, pool text
   level numeric, call_level numeric, liq_level numeric, in_call boolean, PRIMARY KEY (day, loan));
 CREATE TABLE IF NOT EXISTS margin_events (ts timestamptz, loan text, pool text, asset text, kind text, principal_usd numeric, level numeric,
   call_level numeric, flag boolean, usd numeric, hours numeric);
+-- SYRUP perp open interest / volume and DEX liquidity history, free public sources (fetch_market_history.py)
+CREATE TABLE IF NOT EXISTS syrup_market_history (day date, source text, metric text, value numeric, PRIMARY KEY (day, source, metric));
