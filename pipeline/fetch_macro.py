@@ -7,7 +7,7 @@ Onchain, Ethereum (macro_onchain): read from the contracts at the last block of 
     the aToken) and Compound v3 (totalSupply / totalBorrow), for USDC, USDT and DAI markets. Maple loans from loan_state.
 All chains (llama_lending, DefiLlama): supplied (TVL + borrowed) and borrowed for the 25 largest lending protocols, weekly.
 """
-import datetime as dt, requests
+import datetime as dt, time, requests
 from web3 import Web3
 from common import db, w3
 from fetch_state import block_before
@@ -63,11 +63,19 @@ def llama_lending(conn):
     ps = requests.get("https://api.llama.fi/protocols", timeout=120).json()
     top = sorted([p for p in ps if p.get("category") == "Lending"], key=lambda p: -(p.get("tvl") or 0))[:25]
     rows = []
+    missing = []
     for p in top:
-        try:
-            j = requests.get(f"https://api.llama.fi/protocol/{p['slug']}", timeout=120).json()
-        except Exception:
-            continue
+        j = None
+        for i in range(5):   # DefiLlama rate-limits; a skipped protocol makes the week's total look like a crash (15 Nov 2026)
+            try:
+                r = requests.get(f"https://api.llama.fi/protocol/{p['slug']}", timeout=120)
+                if r.status_code == 200: j = r.json(); break
+            except Exception:
+                pass
+            time.sleep(2 ** i)
+        if j is None:
+            missing.append(p["name"]); continue
+        time.sleep(0.5)
         tvl = {r["date"]: r["totalLiquidityUSD"] for r in j.get("tvl", [])}
         bor = {r["date"]: r["totalLiquidityUSD"] for r in (j.get("chainTvls", {}).get("borrowed", {}) or {}).get("tvl", [])}
         for ts, v in tvl.items():
@@ -77,7 +85,7 @@ def llama_lending(conn):
             rows.append((day, p["name"], v + b, b))
     conn.cursor().executemany("""INSERT INTO llama_lending VALUES (%s,%s,%s,%s) ON CONFLICT (day, protocol) DO UPDATE
         SET supplied_usd=EXCLUDED.supplied_usd, borrowed_usd=EXCLUDED.borrowed_usd""", rows)
-    conn.commit(); print(f"llama_lending: {len(rows)} rows, {len(top)} protocols")
+    conn.commit(); print(f"llama_lending: {len(rows)} rows, {len(top) - len(missing)}/{len(top)} protocols", "missing:", missing)
 
 def cg_yield_bearing(conn):
     """CoinGecko 'yield-bearing-stablecoins' category: today's top 15 by market cap (all chains), with a year of daily
